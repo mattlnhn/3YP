@@ -47,7 +47,7 @@ function [T] = heating2(n, L, theta, dt, nt, mat, beam)
     rho_p = densdist(beam.pos, n, L, beam.np, beam.f, beam.sigma);
     
     %% TIME ITERATION
-    i = 1
+    i = 1;
 
     % coefficients
     C1 = (mat.k*dt)/(mat.rho*mat.c_p*dl*dl); % inner node
@@ -64,10 +64,10 @@ function [T] = heating2(n, L, theta, dt, nt, mat, beam)
         % rho_p = ;
 
         % boundary conditions
-        BQ.L = ; % boundary Qdot, left
-        BQ.T = ; % top
-        BQ.R = ; % right
-        BQ.B = ; % bottom
+        BQ.L = 0; % boundary Qdot, left
+        BQ.T = 0; % top
+        BQ.R = 0; % right
+        BQ.B = 0; % bottom
         
         % temp matrices
         Ti.N = T(:, :, i+1); % node
@@ -85,6 +85,8 @@ function [T] = heating2(n, L, theta, dt, nt, mat, beam)
             C3*rho_p + ...
             -C4*(Ti.N.^4-T_0^4);
 
+        i = i + 1;
+
     end
 
 end
@@ -101,19 +103,17 @@ function [rho_p] = densdist(pos, n, L, np, f, sigma_xy)
 %   f           bunches per second [s-1]
 %   sigma_xy    beam core width (1 s.d.) [m]
 
-    % node distances from beam centre
-    dl = L/(n-1);
+    dl = L/n;
+    x = (0:dl:L-dl) + dl/2;
+    y = (0:dl:L-dl) + dl/2 - L/2;
     xpos = pos(1);
     ypos = pos(2);
-    L = (n-1)*dl;
-    x = -xpos:dl:L-xpos;
-    y = (L/2)-ypos:-dl:(-L/2)-ypos;
     [xmesh, ymesh] = meshgrid(x, y);
-
-    r = (xmesh.^2+ymesh.^2).^.5;
+    % node distance from beam centre squared
+    d2 = (xpos - xmesh).^2 + (ypos - ymesh).^2;
     
     % gaussian
     p = np*f; % avg protons s^-1
-    rho_p = p*(2*pi*sigma_xy^2)^-1*exp(-.5*r.^2/sigma_xy^2);
+    rho_p = p*(2*pi*sigma_xy^2)^-1*exp(-.5*d2/sigma_xy^2);
 
 end
