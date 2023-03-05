@@ -7,27 +7,31 @@ function [T] = heating2(n, L, theta, dt, nt, mat, beam)
 %   dt      time step [s]
 %   nt      no. of time steps
 %   mat     material properties structure
-%           mat.A           atomic mass
+%           mat.A           atomic mass, g mol-1
 %           mat.Z           atomic no.
-%           mat.I           mean ionisation energy
+%           mat.I           mean ionisation energy, MeV
 %           mat.w           mass fraction
-%           mat.rho         density
+%           mat.rho         density, g cm-3
 %           mat.epsilon     emissivity
-%           mat.k           thermal conductivity
-%           mat.c_p         specific heat capacity
+%           mat.k           thermal conductivity, W m-1 K-1
+%           mat.c_p         specific heat capacity, J kg-1 K-1
 %   beam    beam properties structure
-%           beam.M          particle mass [MeV c-2]
+%           beam.M          particle mass, MeV c-2
 %           beam.gamma      Lorentz factor
 %           beam.f          bunches per second
 %           beam.np         protons per bunch
-%           beam.sigma      beam width
+%           beam.sigma      beam width, m
 %           beam.pos        beam centre position w.r.t. midpoint of 
-%                           detector left edge
+%                           detector left edge, 1x2, m
 %   OUTPUT ----------------------------------------------------------------
 %   T       n*n*nt matrix of temp at each node at each time step
+%   NOTES -----------------------------------------------------------------
+%   bethe function uses combination of CGS and eV for units; heat transfer
+%   working in SI units hence unit conversion AFTER bethe function has been
+%   called
     
     %% CONSTANTS
-    const.sigma = ; % stefan-boltzmann
+    const.sigma = 5.670374419e-8; % stefan-boltzmann, W m-2 K-4
     
     %% MESH
     dl = L/n; % volume cell side length
@@ -38,13 +42,20 @@ function [T] = heating2(n, L, theta, dt, nt, mat, beam)
     E.T = [ones(1, n); zeros(n-1, n)]; % top
     E.R = [zeros(n, n-1) ones(n, 1)]; % right
     E.B = [zeros(n-1, n); ones(1, n)]; % bottom
-    
 
     %% ENERGY DEPOSITION
     beta = (1-beam.gamma^-2)^.5;
     % mass stopping power = <1/rho dE/dx>
     msp = bethe(beam.M, mat.A, mat.Z, mat.I, mat.w, mat.rho, beta, 1);
-    rho_p = densdist(beam.pos, n, L, beam.np, beam.f, beam.sigma);
+    rho_p = densdist(beam.pos, n, L, beam.np, beam.f, beam.sigma, beam.sigma);
+
+    %% CONVERT UNITS
+    % mass stopping power MeV g-1 cm2 --> J g-1 m2
+    % * joules per mev * (m per cm)^2
+    msp = msp * 1.6021773e-13 * (0.1)^2;
+    % density g cm-3 --> kg m-3
+    mat.rho = mat.rho * 1000;
+
     
     %% TIME ITERATION
     i = 1;
@@ -52,13 +63,13 @@ function [T] = heating2(n, L, theta, dt, nt, mat, beam)
     % coefficients
     C1 = (mat.k*dt)/(mat.rho*mat.c_p*dl*dl); % inner node
     C2 = (dt)/(mat.rho*mat.c_p*dl*dl*theta); % boundary node
-    C3 = (dt*msp)/(mat.rho*mat.c_p*mat.c_p*dl*dl*theta); % protons
+    %C3 = (dt*msp)/(mat.rho*mat.c_p*mat.c_p*dl*dl*theta) % protons
+    C3 = (dt*msp)/mat.c_p;
     C4 = (2*mat.epsilon*const.sigma*dt)/(mat.rho*mat.c_p*theta); % rad
 
     while i <= nt
-        % CURRENT T is T(:, :, (i+1))
-        % NEXT T is T(:, :, (i+1)+1) = T(:, :, i+2)
-        % offset by one due to MATLAB indexing and t=0 being first frame
+        % PREVIOUS T is T(:, :, i)
+        % NEW T is T(:, :, i+1)
         
         % moving beam centre relative to edge
         % rho_p = ;
@@ -70,14 +81,14 @@ function [T] = heating2(n, L, theta, dt, nt, mat, beam)
         BQ.B = 0; % bottom
         
         % temp matrices
-        Ti.N = T(:, :, i+1); % node
+        Ti.N = T(:, :, i); % node
         Ti.L = [zeros(n, 1) Ti.N(:, 1:n-1)]; % left
         Ti.T = [zeros(1, n); Ti.N(1:n-1, :)]; % top
         Ti.R = [Ti.N(:, 2:n) zeros(n, 1)]; % right
         Ti.B = [Ti.N(2:n, :); zeros(1, n)]; % bottom
 
         % next T
-        T(:, :, i+2) = Ti.N + ...
+        T(:, :, i+1) = Ti.N + ...
             C1*(Ti.L-Ti.N).*not(E.L) + C2*BQ.L.*E.L + ...
             C1*(Ti.T-Ti.N).*not(E.T) + C2*BQ.T.*E.T + ...
             C1*(Ti.R-Ti.N).*not(E.R) + C2*BQ.R.*E.R + ...
@@ -93,7 +104,7 @@ end
 
 %% FUNCTIONS
 
-function [rho_p] = densdist(pos, n, L, np, f, sigma_xy)
+function [rho_p] = densdist(pos, n, L, np, f, sigma_x, sigma_y)
 % DENSDIST proton density at each node
 %   pos         position of beam centre relative to midpoint of left edge of
 %               detector, 1x2 vector
@@ -104,16 +115,18 @@ function [rho_p] = densdist(pos, n, L, np, f, sigma_xy)
 %   sigma_xy    beam core width (1 s.d.) [m]
 
     dl = L/n;
-    x = (0:dl:L-dl) + dl/2;
-    y = (0:dl:L-dl) + dl/2 - L/2;
-    xpos = pos(1);
-    ypos = pos(2);
-    [xmesh, ymesh] = meshgrid(x, y);
+    xrange = (0:dl:L-dl) + dl/2;
+    yrange = (0:dl:L-dl) + dl/2 - L/2;
+    xbeam = pos(1);
+    ybeam = pos(2);
+    [xmesh, ymesh] = meshgrid(xrange, yrange);
     % node distance from beam centre squared
-    d2 = (xpos - xmesh).^2 + (ypos - ymesh).^2;
-    
+    %d2 = (xpos - xmesh).^2 + (ypos - ymesh).^2;
+    xrel2 = (xbeam - xmesh).^2;
+    yrel2 = (ybeam - ymesh).^2;
+
     % gaussian
     p = np*f; % avg protons s^-1
-    rho_p = p*(2*pi*sigma_xy^2)^-1*exp(-.5*d2/sigma_xy^2);
+    rho_p = (p/(2*pi*sigma_x*sigma_y))*exp(-.5*((xrel2/sigma_x^2)+(yrel2/sigma_y^2)));
 
 end
