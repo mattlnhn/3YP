@@ -1,4 +1,4 @@
-clc; clear
+clc; clear; close all;
 
 n = 50; % no. of nodes = no. of cells per side
 L = 1e-4; % length of side, m
@@ -18,18 +18,19 @@ beam.gamma = 7460.69; % Lorentz factor
 beam.f = 11.2e3;  % bunches per second, Hz
 beam.np = 1.15e11; % protons per bunch (nominal 25ns spacing)
 beam.sigma = 2.5e-6; % beam width, m
-beam.pos = [-5*beam.sigma 0]; % beam centre pos w.r.t. midpoint of left edge, m
+beam.pos = [-3*beam.sigma 0]; % beam centre pos w.r.t. midpoint of left edge, m
 
 dl = L/n;
 dt = .25*(mat.rho*1000*mat.c_p*dl*dl)/mat.k; % time increment, s
-nt = 100000; % no. of time steps
+nt = 700000; % no. of time steps
 T = dt*nt;
 
-fprintf('dt = %.10f with %d time steps for total sim time %d seconds', dt, nt, T)
+fprintf('dt = %d s with %d time steps for total sim time %d s\n', dt, nt, T)
 
-T = heating2(n, L, theta, dt, nt, mat, beam);
+dT = heating2(n, L, theta, dt, nt, mat, beam);
 
 figure
-contourf(T(:, :, end)-T(:, :, 1))
+contourf(dT(:, :, end))
+axis equal
 colorbar
 
