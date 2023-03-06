@@ -1,4 +1,4 @@
-function [dT] = heating2(n, L, theta, dt, nt, mat, beam)
+function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
 % HEATING
 %   INPUTS ----------------------------------------------------------------
 %   n       no. of nodes
@@ -29,15 +29,15 @@ function [dT] = heating2(n, L, theta, dt, nt, mat, beam)
 %   bethe function uses combination of CGS and eV for units; heat transfer
 %   working in SI units hence unit conversion AFTER bethe function has been
 %   called
-    
+
     %% CONSTANTS
     const.sigma = 5.670374419e-8; % stefan-boltzmann, W m-2 K-4
     
     %% MESH
     dl = L/n; % volume cell side length
-    dT = zeros(n, n, nt+1); % n*n mesh at each t inc. t=0
+    dT = zeros(n, n); % n*n mesh
     T_0 = 1.9*ones(n, n); % K
-    %T(:, :, 1) = ones(n, n)*T_0; % T(0)
+
     E.L = [ones(n, 1) zeros(n, n-1)]; % left edge
     E.T = [ones(1, n); zeros(n-1, n)]; % top
     E.R = [zeros(n, n-1) ones(n, 1)]; % right
@@ -63,11 +63,18 @@ function [dT] = heating2(n, L, theta, dt, nt, mat, beam)
     % coefficients
     C1 = (mat.k*dt)/(mat.rho*mat.c_p*dl*dl); % inner node
     C2 = (dt)/(mat.rho*mat.c_p*dl*dl*theta); % boundary node
-    %C3 = (dt*msp)/(mat.rho*mat.c_p*mat.c_p*dl*dl*theta) % protons
-    C3 = (dt*msp)/mat.c_p;
+    C3 = (dt*msp)/mat.c_p; % protons
     C4 = (2*mat.epsilon*const.sigma*dt)/(mat.rho*mat.c_p*theta); % rad
 
+    fps = 100;
+    nf = round((dt*fps)^-1);
+    frames = round(nt/nf);
+    dTframes = zeros(n, n, frames);
+
     while i <= nt
+
+        %fprintf('Current time is t+%d\n%.4f%% complete\n\n', i*dt, 100*i/nt)
+        
         % PREVIOUS T is T(:, :, i)
         % NEW T is T(:, :, i+1)
         
@@ -81,7 +88,7 @@ function [dT] = heating2(n, L, theta, dt, nt, mat, beam)
         BQ.B = 0; % bottom
         
         % temp matrices
-        Ti.N = T_0 + dT(:, :, i); % node
+        Ti.N = T_0 + dT; % node
         Ti.L = [zeros(n, 1) Ti.N(:, 1:n-1)]; % left
         Ti.T = [zeros(1, n); Ti.N(1:n-1, :)]; % top
         Ti.R = [Ti.N(:, 2:n) zeros(n, 1)]; % right
@@ -96,7 +103,12 @@ function [dT] = heating2(n, L, theta, dt, nt, mat, beam)
             C3*rho_p + ...
             -C4*(Ti.N.^4-T_0^4);
 
-        dT(:, :, i+1) = T - T_0;
+        dT = T - T_0;
+
+        if rem(i, nf) == 0
+            fprintf('%.4f%% complete. Animation frame captured.\n', 100*i/nt)
+            dTframes(:, :, i/nf) = dT;
+        end
 
         i = i + 1;
 

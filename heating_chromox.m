@@ -1,7 +1,7 @@
 clc; clear; close all;
 
-n = 50; % no. of nodes = no. of cells per side
-L = 1e-4; % length of side, m
+n = 1000; % no. of nodes = no. of cells per side
+L = 1e-2; % length of side, m
 theta = 100e-6; % thickness, m
 
 mat.A = [26.982, 51.996, 15.999]; % atomic mass, g mol-1
@@ -21,16 +21,20 @@ beam.sigma = 2.5e-6; % beam width, m
 beam.pos = [-3*beam.sigma 0]; % beam centre pos w.r.t. midpoint of left edge, m
 
 dl = L/n;
-dt = .25*(mat.rho*1000*mat.c_p*dl*dl)/mat.k; % time increment, s
-nt = 700000; % no. of time steps
+tau = .25;
+dt = tau*(mat.rho*1000*mat.c_p*dl*dl)/mat.k; % time increment, s
+nt = 400000; % no. of time steps
 T = dt*nt;
 
-fprintf('dt = %d s with %d time steps for total sim time %d s\n', dt, nt, T)
+fprintf('dt = %d s with %d time steps for total simulation time %d s\nEnter to continue...\n', dt, nt, T)
+pause()
 
 dT = heating2(n, L, theta, dt, nt, mat, beam);
 
+%{
 figure
 contourf(dT(:, :, end))
 axis equal
 colorbar
+%}
 
