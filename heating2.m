@@ -30,13 +30,14 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
 %   working in SI units hence unit conversion AFTER bethe function has been
 %   called
 
-    %% CONSTANTS
+    %% PHYSICAL CONSTANTS
     const.sigma = 5.670374419e-8; % stefan-boltzmann, W m-2 K-4
     
     %% MESH
     dl = L/n; % volume cell side length
-    dT = zeros(n, n); % n*n mesh
+    dT = zeros(n, n); % preallocate
     T_0 = 1.9*ones(n, n); % K
+    T_04 = T_0.^4; % used in loop
 
     E.L = [ones(n, 1) zeros(n, n-1)]; % left edge
     E.T = [ones(1, n); zeros(n-1, n)]; % top
@@ -56,21 +57,40 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
     % density g cm-3 --> kg m-3
     mat.rho = mat.rho * 1000;
 
-    
+    %% ANIMATION OUTPUT PARAMS
+    fps = 100; % frames per simulated second
+    nf = round((dt*fps)^-1); % no. of time steps btwn frames
+    frames = round(nt/nf); % no. of frames total
+    dTframes = zeros(n, n, frames); % preallocate
+
     %% TIME ITERATION
     i = 1;
 
     % coefficients
     C1 = (mat.k*dt)/(mat.rho*mat.c_p*dl*dl); % inner node
     C2 = (dt)/(mat.rho*mat.c_p*dl*dl*theta); % boundary node
-    C3 = (dt*msp)/mat.c_p; % protons
+    % if rho_p constant w.r.t. t
+    C3 = (dt*msp*rho_p)/mat.c_p; % protons
+    % if not, include rho_p term in calculation later
+    %C3 = (dt*msp)/mat.c_p; % protons
     C4 = (2*mat.epsilon*const.sigma*dt)/(mat.rho*mat.c_p*theta); % rad
 
-    fps = 100;
-    nf = round((dt*fps)^-1);
-    frames = round(nt/nf);
-    dTframes = zeros(n, n, frames);
+    % if boundary conditions stay constant, calculate here
+    BQ.L = 0; % boundary Qdot, left
+    BQ.T = 0; % top
+    BQ.R = 0; % right
+    BQ.B = 0; % bottom
 
+    % combine before loop to save computation time
+    C1L = C1*not(E.L);
+    C1T = C1*not(E.T);
+    C1R = C1*not(E.R);
+    C1B = C1*not(E.B);
+    C2L = C2*E.L;
+    C2T = C2*E.T;
+    C2R = C2*E.R;
+    C2B = C2*E.B;
+    
     while i <= nt
 
         %fprintf('Current time is t+%d\n%.4f%% complete\n\n', i*dt, 100*i/nt)
@@ -79,16 +99,17 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
         % NEW T is T(:, :, i+1)
         
         % moving beam centre relative to edge
-        % rho_p = ;
+        %rho_p = ;
 
-        % boundary conditions
-        BQ.L = 0; % boundary Qdot, left
-        BQ.T = 0; % top
-        BQ.R = 0; % right
-        BQ.B = 0; % bottom
+        % if boundary conditions change at each step, calculate here
+        %BQ.L = 0; % boundary Qdot, left
+        %BQ.T = 0; % top
+        %BQ.R = 0; % right
+        %BQ.B = 0; % bottom
         
         % temp matrices
         Ti.N = T_0 + dT; % node
+
         Ti.L = [zeros(n, 1) Ti.N(:, 1:n-1)]; % left
         Ti.T = [zeros(1, n); Ti.N(1:n-1, :)]; % top
         Ti.R = [Ti.N(:, 2:n) zeros(n, 1)]; % right
@@ -96,12 +117,12 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
 
         % next T
         T = Ti.N + ...
-            C1*(Ti.L-Ti.N).*not(E.L) + C2*BQ.L.*E.L + ...
-            C1*(Ti.T-Ti.N).*not(E.T) + C2*BQ.T.*E.T + ...
-            C1*(Ti.R-Ti.N).*not(E.R) + C2*BQ.R.*E.R + ...
-            C1*(Ti.B-Ti.N).*not(E.B) + C2*BQ.B.*E.B + ...
-            C3*rho_p + ...
-            -C4*(Ti.N.^4-T_0^4);
+            C1L.*(Ti.L-Ti.N) + C2L.*BQ.L + ...
+            C1T.*(Ti.T-Ti.N) + C2T.*BQ.T + ...
+            C1R.*(Ti.R-Ti.N) + C2R.*BQ.R + ...
+            C1B.*(Ti.B-Ti.N) + C2B.*BQ.B + ...
+            C3 + ...
+            -C4*(Ti.N.^4-T_04);
 
         dT = T - T_0;
 
