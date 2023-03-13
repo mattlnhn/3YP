@@ -37,7 +37,7 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
     dl = L/n; % volume cell side length
     dT = zeros(n, n); % preallocate
     T_0 = 1.9*ones(n, n); % K
-    T_04 = T_0.^4; % used in loop
+    T_04 = T_0.*T_0.*T_0.*T_0; % used in loop
 
     E.L = [ones(n, 1) zeros(n, n-1)]; % left edge
     E.T = [ones(1, n); zeros(n-1, n)]; % top
@@ -58,7 +58,7 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
     mat.rho = mat.rho * 1000;
 
     %% ANIMATION OUTPUT PARAMS
-    fps = 100; % frames per simulated second
+    fps = 200; % frames per simulated second
     nf = round((dt*fps)^-1); % no. of time steps btwn frames
     frames = round(nt/nf); % no. of frames total
     dTframes = zeros(n, n, frames); % preallocate
@@ -86,11 +86,21 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
     C1T = C1*not(E.T);
     C1R = C1*not(E.R);
     C1B = C1*not(E.B);
-    C2L = C2*E.L;
-    C2T = C2*E.T;
-    C2R = C2*E.R;
-    C2B = C2*E.B;
-    
+    %C2L = C2*E.L;
+    %C2T = C2*E.T;
+    %C2R = C2*E.R;
+    %C2B = C2*E.B;
+
+    Ti.L = zeros(n, n);
+    Ti.T = zeros(n, n);
+    Ti.R = zeros(n, n);
+    Ti.B = zeros(n, n);
+
+    Bi.L = zeros(n, n);
+    Bi.T = zeros(n, n);
+    Bi.R = zeros(n, n);
+    Bi.B = zeros(n, n);
+
     while i <= nt
 
         %fprintf('Current time is t+%d\n%.4f%% complete\n\n', i*dt, 100*i/nt)
@@ -106,23 +116,48 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
         %BQ.T = 0; % top
         %BQ.R = 0; % right
         %BQ.B = 0; % bottom
-        
+
         % temp matrices
         Ti.N = T_0 + dT; % node
 
+        %{
         Ti.L = [zeros(n, 1) Ti.N(:, 1:n-1)]; % left
         Ti.T = [zeros(1, n); Ti.N(1:n-1, :)]; % top
         Ti.R = [Ti.N(:, 2:n) zeros(n, 1)]; % right
         Ti.B = [Ti.N(2:n, :); zeros(1, n)]; % bottom
+        %}
 
-        % next T
+        Ti.L(:, 2:n) = Ti.N(:, 1:n-1);
+        Ti.T(2:n, :) = Ti.N(1:n-1, :);
+        Ti.R(:, 1:n-1) = Ti.N(:, 2:n);
+        Ti.B(1:n-1, :) = Ti.N(2:n, :);
+
+        
+        Bi.L(:, 1) = C2*BQ.L;
+        Bi.T(1, :) = C2*BQ.T;
+        Bi.R(:, n) = C2*BQ.R;
+        Bi.B(n, :) = C2*BQ.B;
+        
+
+        TN4 = Ti.N.*Ti.N.*Ti.N.*Ti.N;
+
+        %{
         T = Ti.N + ...
             C1L.*(Ti.L-Ti.N) + C2L.*BQ.L + ...
             C1T.*(Ti.T-Ti.N) + C2T.*BQ.T + ...
             C1R.*(Ti.R-Ti.N) + C2R.*BQ.R + ...
             C1B.*(Ti.B-Ti.N) + C2B.*BQ.B + ...
             C3 + ...
-            -C4*(Ti.N.^4-T_04);
+            -C4*(TN4-T_04);
+        %}
+        
+        T = Ti.N + ...
+            C1L.*(Ti.L-Ti.N) + Bi.L + ...
+            C1T.*(Ti.T-Ti.N) + Bi.T + ...
+            C1R.*(Ti.R-Ti.N) + Bi.R + ...
+            C1B.*(Ti.B-Ti.N) + Bi.B + ...
+            C3 + ...
+            -C4*(TN4-T_04);
 
         dT = T - T_0;
 

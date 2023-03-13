@@ -1,13 +1,12 @@
 figure(1);
-axis equal;
-filename = 'test3.gif';
-load('dT_3.mat');
-dT = dT + 1.9;
+filename = 'test4.gif';
+load('dT_500_1s.mat');
 m = max(dT, [], 'all');
 for i = 1:size(dT, 3)
-    contourf(dT(:, :, i), 256, 'linestyle', 'none')
-    colorbar
-    clim([1.9 m])
+    contourf(dT(:, :, i), 256, 'linestyle', 'none');
+    axis equal;
+    colorbar;
+    clim([0 m]);
     drawnow
     frame = getframe(1);
     im = frame2im(frame);

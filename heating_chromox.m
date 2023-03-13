@@ -1,7 +1,7 @@
 clc; clear; close all;
 
-n = 50; % no. of nodes = no. of cells per side
-L = 1e-4; % length of side, m
+n = 500; % no. of nodes = no. of cells per side
+L = 1e-3; % length of side, m
 theta = 100e-6; % thickness, m
 
 mat.A = [26.982, 51.996, 15.999]; % atomic mass, g mol-1
@@ -23,7 +23,9 @@ beam.pos = [-3*beam.sigma 0]; % beam centre pos w.r.t. midpoint of left edge, m
 dl = L/n;
 tau = .25;
 dt = tau*(mat.rho*1000*mat.c_p*dl*dl)/mat.k; % time increment, s
-nt = 10000000; % no. of time steps
+T = 1;
+nt = round(T/dt);
+%nt = 1000000; % no. of time steps
 T = dt*nt;
 
 fprintf('dt = %d s with %d time steps for total simulation time %d s\nEnter to continue...\n', dt, nt, T)
