@@ -1,7 +1,11 @@
 clc; clear; close all;
 
-n = 500; % no. of nodes = no. of cells per side
-L = 1e-3; % length of side, m
+res = 1e-6; % finest resolution required
+L = 1e-2; % length of side, m
+nfine = L/res;
+n = round(nfine/8);
+if rem(n, 2) == 1; n = n+1; end % n must be multiple of 2
+
 theta = 100e-6; % thickness, m
 
 mat.A = [26.982, 51.996, 15.999]; % atomic mass, g mol-1
@@ -20,7 +24,7 @@ beam.np = 1.15e11; % protons per bunch (nominal 25ns spacing)
 beam.sigma = 2.5e-6; % beam width, m
 beam.pos = [-3*beam.sigma 0]; % beam centre pos w.r.t. midpoint of left edge, m
 
-dl = L/n;
+dl = L/(n*8);
 tau = .25;
 dt = tau*(mat.rho*1000*mat.c_p*dl*dl)/mat.k; % time increment, s
 T = 1;

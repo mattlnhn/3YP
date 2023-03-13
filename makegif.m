@@ -1,6 +1,6 @@
 figure(1);
 filename = 'test4.gif';
-load('dT_500_1s.mat');
+load('dT_mesh1.mat');
 m = max(dT, [], 'all');
 for i = 1:size(dT, 3)
     contourf(dT(:, :, i), 256, 'linestyle', 'none');

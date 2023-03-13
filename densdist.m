@@ -1,15 +1,17 @@
-function [rho_p] = densdist(pos, n, L, np, f, sigma_x, sigma_y)
+function [rho_p] = densdist(pos, n, L, xfrac, np, f, sigma_x, sigma_y)
 % DENSDIST proton density at each node
 %   pos         position of beam centre relative to midpoint of left edge of
 %               detector, 1x2 vector
 %   n           no. of nodes
 %   L           detector side length [m]
+%   xfrac       fraction of detector in x-direction
 %   np          no. protons per bunch
 %   f           bunches per second [s-1]
 %   sigma_xy    beam core width (1 s.d.) [m]
 
     dl = L/n;
     xrange = (0:dl:L-dl) + dl/2;
+    xrange = xrange(:, 1:xfrac*n);
     yrange = (0:dl:L-dl) + dl/2 - L/2;
     xbeam = pos(1);
     ybeam = pos(2);
