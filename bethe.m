@@ -46,6 +46,9 @@ end
 function I = bragg(A, Z, I, w)
 %BRAGG calculate I for compounds
 
+    if length(I) > 1
+        I = I*1.13;
+    end
     n = sum(w.*(Z./A).*log(I));
     d = sum(w.*(Z./A));
     I = exp(n/d);
@@ -53,7 +56,7 @@ function I = bragg(A, Z, I, w)
 end
 
 function delta = deltacorr2(betagamma, w, Z, A, I, rho)
-%DELTACORR2 delta correlation based on D.E. Groom et al. (2001)
+%DELTACORR2 delta correlation based on D. E. Groom et al. (2001)
 
     I = I*1e6; % MeV to eV
     ZoverA = sum(w.*Z./A); % see appendix A
