@@ -35,8 +35,9 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
     
     %% MESH
 
-    % adaptive grid layout
     %{
+
+    adaptive grid layout
 
     x f n n c c c c     ]           x = xfine
     x f n n c c c c     |           f = fine
@@ -49,10 +50,10 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
 
     %}
 
-    nc = n
-    nn = n*2
-    nf = n*2*2
-    nx = n*2*2*2
+    nc = n;
+    nn = n*2;
+    nf = n*2*2;
+    nx = n*2*2*2;
 
     wc = nc/2; % fractions must add to 1
     wn = nn/4;
@@ -121,10 +122,10 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
     % mass stopping power = <1/rho dE/dx>
     msp = bethe(beam.M, mat.A, mat.Z, mat.I, mat.w, mat.rho, beta, 1);
 
-    rho_p.x = densdist(beam.pos, nx, L, 1/8, beam.np, beam.f, beam.sigma, beam.sigma);
-    rho_p.f = densdist(beam.pos-L/8, nf, L, 1/8, beam.np, beam.f, beam.sigma, beam.sigma);
-    rho_p.n = densdist(beam.pos-L/4, nn, L, 1/4, beam.np, beam.f, beam.sigma, beam.sigma);
-    rho_p.c = densdist(beam.pos-L/2, nc, L, 1/2, beam.np, beam.f, beam.sigma, beam.sigma);
+    rho_p.x = densdist(beam.pos, nx, L, 1/8, beam.np, beam.nb, beam.f, beam.sigma, beam.sigma);
+    rho_p.f = densdist(beam.pos-[L/8 0], nf, L, 1/8, beam.np, beam.nb, beam.f, beam.sigma, beam.sigma);
+    rho_p.n = densdist(beam.pos-[L/4 0], nn, L, 1/4, beam.np, beam.nb, beam.f, beam.sigma, beam.sigma);
+    rho_p.c = densdist(beam.pos-[L/2 0], nc, L, 1/2, beam.np, beam.nb, beam.f, beam.sigma, beam.sigma);
 
 
     %% CONVERT UNITS
@@ -136,7 +137,7 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
 
 
     %% ANIMATION OUTPUT PARAMS
-    fps = 10; % frames per simulated second
+    fps = 100; % frames per simulated second
     nframes = round((dt*fps)^-1); % no. of time steps btwn frames
     frames = round(nt/nframes); % no. of frames total
     dTframes = zeros(nx, nx, frames); % preallocate
@@ -224,7 +225,7 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
     Tc2n = zeros(nc, 1);
 
     while i <= nt
-        tic;
+        %tic;
 
         % moving beam centre relative to edge
         %rho_p = ;
@@ -240,11 +241,6 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
         Ti.c.n4 = Ti.c.n.*Ti.c.n.*Ti.c.n.*Ti.c.n;
 
         % XFINE
-        % left, top, right, bottom temps
-        Ti.x.l(:, 2:end) = Ti.x.n(:, 1:end-1);
-        Ti.x.t(2:end, :) = Ti.x.n(1:end-1, :);
-        Ti.x.r(:, 1:end-1) = Ti.x.n(:, 2:end);
-        Ti.x.b(1:end-1, :) = Ti.x.n(2:end, :);
         % boundary conditions
         %Bi.x.l = ;
         %Bi.x.t = ;
@@ -254,21 +250,17 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
         Bi.x.r(:, end) = c1.x.coef*(Tx2f-Ti.x.n(:, end));
         %Bi.x.b = ;
         % update temp
-        T.x = Ti.x.n + ... 
-              c1.x.l.*(Ti.x.l-Ti.x.n) + Bi.x.l + ...
-              c1.x.t.*(Ti.x.t-Ti.x.n) + Bi.x.t + ...
-              c1.x.r.*(Ti.x.r-Ti.x.n) + Bi.x.r + ...
-              c1.x.b.*(Ti.x.b-Ti.x.n) + Bi.x.b + ...
+        T.x = Ti.x.n + ...
+              c1.x.l.*(circshift(Ti.x.n, [0 1])-Ti.x.n) + Bi.x.l + ...
+              c1.x.t.*(circshift(Ti.x.n, [1 0])-Ti.x.n) + Bi.x.t + ...
+              c1.x.r.*(circshift(Ti.x.n, [0 -1])-Ti.x.n) + Bi.x.r + ...
+              c1.x.b.*(circshift(Ti.x.n, [-1 0])-Ti.x.n) + Bi.x.b + ...
               c3.x + ...
               -c4*(Ti.x.n4-T04.x);
         dT.x = T.x - T0.x;
 
+
         % FINE
-        % left, top, right, bottom temps
-        Ti.f.l(:, 2:end) = Ti.f.n(:, 1:end-1);
-        Ti.f.t(2:end, :) = Ti.f.n(1:end-1, :);
-        Ti.f.r(:, 1:end-1) = Ti.f.n(:, 2:end);
-        Ti.f.b(1:end-1, :) = Ti.f.n(2:end, :);
         % boundary conditions
         Tf2x = (Ti.x.n(1:2:end-1, end) + Ti.x.n(2:2:end, end))/2;
         Bi.f.l(:, 1) = c1.f.coef*(Tf2x-Ti.f.n(:, 1));
@@ -280,20 +272,16 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
         %Bi.f.b = ;
         % update temp
         T.f = Ti.f.n + ... 
-              c1.f.l.*(Ti.f.l-Ti.f.n) + Bi.f.l + ...
-              c1.f.t.*(Ti.f.t-Ti.f.n) + Bi.f.t + ...
-              c1.f.r.*(Ti.f.r-Ti.f.n) + Bi.f.r + ...
-              c1.f.b.*(Ti.f.b-Ti.f.n) + Bi.f.b + ...
+              c1.f.l.*(circshift(Ti.f.n, [0 1])-Ti.f.n) + Bi.f.l + ...
+              c1.f.t.*(circshift(Ti.f.n, [1 0])-Ti.f.n) + Bi.f.t + ...
+              c1.f.r.*(circshift(Ti.f.n, [0 -1])-Ti.f.n) + Bi.f.r + ...
+              c1.f.b.*(circshift(Ti.f.n, [-1 0])-Ti.f.n) + Bi.f.b + ...
               c3.f + ...
               -c4*(Ti.f.n4-T04.f);
         dT.f = T.f - T0.f;
 
 
         % NORMAL
-        Ti.n.l(:, 2:end) = Ti.n.n(:, 1:end-1);
-        Ti.n.t(2:end, :) = Ti.n.n(1:end-1, :);
-        Ti.n.r(:, 1:end-1) = Ti.n.n(:, 2:end);
-        Ti.n.b(1:end-1, :) = Ti.n.n(2:end, :);
         % boundary conditions
         Tn2f = (Ti.f.n(1:2:end-1, end) + Ti.f.n(2:2:end, end))/2;
         Bi.n.l(:, 1) = c1.n.coef*(Tn2f-Ti.n.n(:, 1));
@@ -305,19 +293,15 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
         %Bi.n.b = ;
         % update temp
         T.n = Ti.n.n + ... 
-              c1.n.l.*(Ti.n.l-Ti.n.n) + Bi.n.l + ...
-              c1.n.t.*(Ti.n.t-Ti.n.n) + Bi.n.t + ...
-              c1.n.r.*(Ti.n.r-Ti.n.n) + Bi.n.r + ...
-              c1.n.b.*(Ti.n.b-Ti.n.n) + Bi.n.b + ...
+              c1.n.l.*(circshift(Ti.n.n, [0 1])-Ti.n.n) + Bi.n.l + ...
+              c1.n.t.*(circshift(Ti.n.n, [1 0])-Ti.n.n) + Bi.n.t + ...
+              c1.n.r.*(circshift(Ti.n.n, [0 -1])-Ti.n.n) + Bi.n.r + ...
+              c1.n.b.*(circshift(Ti.n.n, [-1 0])-Ti.n.n) + Bi.n.b + ...
               c3.n + ...
               -c4*(Ti.n.n4-T04.n);
         dT.n = T.n - T0.n;
 
         % COARSE
-        Ti.c.l(:, 2:end) = Ti.c.n(:, 1:end-1);
-        Ti.c.t(2:end, :) = Ti.c.n(1:end-1, :);
-        Ti.c.r(:, 1:end-1) = Ti.c.n(:, 2:end);
-        Ti.c.b(1:end-1, :) = Ti.c.n(2:end, :);
         % boundary conditions
         Tc2n = (Ti.n.n(1:2:end-1, end) + Ti.n.n(2:2:end, end))/2;
         Bi.c.l(:, 1) = c1.c.coef*(Tc2n-Ti.c.n(:, 1));
@@ -326,10 +310,10 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
         %Bi.c.b = ;
         % update temp
         T.c = Ti.c.n + ... 
-              c1.c.l.*(Ti.c.l-Ti.c.n) + Bi.c.l + ...
-              c1.c.t.*(Ti.c.t-Ti.c.n) + Bi.c.t + ...
-              c1.c.r.*(Ti.c.r-Ti.c.n) + Bi.c.r + ...
-              c1.c.b.*(Ti.c.b-Ti.c.n) + Bi.c.b + ...
+              c1.c.l.*(circshift(Ti.c.n, [0 1])-Ti.c.n) + Bi.c.l + ...
+              c1.c.t.*(circshift(Ti.c.n, [1 0])-Ti.c.n) + Bi.c.t + ...
+              c1.c.r.*(circshift(Ti.c.n, [0 -1])-Ti.c.n) + Bi.c.r + ...
+              c1.c.b.*(circshift(Ti.c.n, [-1 0])-Ti.c.n) + Bi.c.b + ...
               c3.c + ...
               -c4*(Ti.c.n4-T04.c);
         dT.c = T.c - T0.c;
@@ -345,7 +329,7 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
 
         i = i + 1;
 
-        toc;
+        %toc;
     end
 
 end

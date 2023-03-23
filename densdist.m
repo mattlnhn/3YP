@@ -1,4 +1,4 @@
-function [rho_p] = densdist(pos, n, L, xfrac, np, f, sigma_x, sigma_y)
+function [rho_p] = densdist(pos, n, L, xfrac, np, nb, f, sigma_x, sigma_y)
 % DENSDIST proton density at each node
 %   pos         position of beam centre relative to midpoint of left edge of
 %               detector, 1x2 vector
@@ -22,7 +22,7 @@ function [rho_p] = densdist(pos, n, L, xfrac, np, f, sigma_x, sigma_y)
     yrel2 = (ybeam - ymesh).^2;
 
     % gaussian
-    p = np*f; % avg protons s^-1
+    p = np*f*nb; % avg protons s^-1
     rho_p = (p/(2*pi*sigma_x*sigma_y))*exp(-.5*((xrel2/sigma_x^2)+(yrel2/sigma_y^2)));
 
 end
