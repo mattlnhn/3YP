@@ -6,7 +6,7 @@ nfine = L/res;
 n = round(nfine/8);
 if rem(n, 2) == 1; n = n+1; end % n must be multiple of 2
 
-theta = 100e-6; % thickness, m
+theta = 500e-6; % thickness, m
 
 mat.A = [26.982, 51.996, 15.999]; % atomic mass, g mol-1
 mat.Z = [13, 24, 8]; % atomic no.
@@ -31,7 +31,7 @@ beam.pos = [-3*beam.sigma 0]; % beam centre pos w.r.t. midpoint of left edge, m
 dl = L/(n*8);
 tau = .25;
 dt = tau*(mat.rho*1000*mat.c_p*dl*dl)/mat.k; % time increment, s
-T = .1;
+T = 1;
 nt = round(T/dt);
 T = dt*nt;
 

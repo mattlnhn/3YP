@@ -151,6 +151,15 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
     c1.f.coef = (mat.k*dt)/(mat.rho*mat.c_p*dl.f*dl.f);
     c1.n.coef = (mat.k*dt)/(mat.rho*mat.c_p*dl.n*dl.n);
     c1.c.coef = (mat.k*dt)/(mat.rho*mat.c_p*dl.c*dl.c);
+    % inner boundary coefficients
+    %c1.xf.coef = (mat.k*dt)/(mat.rho*mat.c_p*dl.x*.5*(dl.x+dl.f));
+    %c1.fn.coef = (mat.k*dt)/(mat.rho*mat.c_p*dl.f*.5*(dl.f+dl.n));
+    %c1.nc.coef = (mat.k*dt)/(mat.rho*mat.c_p*dl.n*.5*(dl.n+dl.c));
+    c1.xf.coef = (mat.k*dt)/(mat.rho*mat.c_p*dl.x*dl.f);
+    c1.fn.coef = (mat.k*dt)/(mat.rho*mat.c_p*dl.f*dl.n);
+    c1.nc.coef = (mat.k*dt)/(mat.rho*mat.c_p*dl.n*dl.c);
+
+
     c2.x.coef = (dt)/(mat.rho*mat.c_p*dl.x*dl.x*theta); % boundary node
     c2.f.coef = (dt)/(mat.rho*mat.c_p*dl.f*dl.f*theta);
     c2.n.coef = (dt)/(mat.rho*mat.c_p*dl.n*dl.n*theta);
@@ -248,6 +257,8 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
         Tx2f(2:2:end) = Ti.f.n(:, 1);
         %Tx2f = kron(Ti.f.n(:, 1), [1; 1]);
         Bi.x.r(:, end) = c1.x.coef*(Tx2f-Ti.x.n(:, end));
+        %Bi.x.r(:, end) = c1.f.coef*(Tx2f-Ti.x.n(:, end));
+        %Bi.x.r(:, end) = c1.xf.coef*(Tx2f-Ti.x.n(:, end));
         %Bi.x.b = ;
         % update temp
         T.x = Ti.x.n + ...
@@ -262,13 +273,17 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
 
         % FINE
         % boundary conditions
-        Tf2x = (Ti.x.n(1:2:end-1, end) + Ti.x.n(2:2:end, end))/2;
+        %Tf2x = (Ti.x.n(1:2:end-1, end) + Ti.x.n(2:2:end, end))/2
+        Tf2x = (Ti.x.n(1:2:end-1, end) + Ti.x.n(2:2:end, end) + Ti.x.n(1:2:end-1, end-1) + Ti.x.n(2:2:end, end-1))/4;
         Bi.f.l(:, 1) = c1.f.coef*(Tf2x-Ti.f.n(:, 1));
+        %Bi.f.l(:, 1) = c1.xf.coef*(Tf2x-Ti.f.n(:, 1));
         %Bi.f.t = ;
         Tf2n(1:2:end-1) = Ti.n.n(:, 1);
         Tf2n(2:2:end) = Ti.n.n(:, 1);
         %Tf2n = kron(Ti.n.n(:, 1), [1; 1]);
         Bi.f.r(:, end) = c1.f.coef*(Tf2n-Ti.f.n(:, end));
+        %Bi.f.r(:, end) = c1.n.coef*(Tf2n-Ti.f.n(:, end));
+        %Bi.f.r(:, end) = c1.fn.coef*(Tf2n-Ti.f.n(:, end));
         %Bi.f.b = ;
         % update temp
         T.f = Ti.f.n + ... 
@@ -283,13 +298,17 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
 
         % NORMAL
         % boundary conditions
-        Tn2f = (Ti.f.n(1:2:end-1, end) + Ti.f.n(2:2:end, end))/2;
+        %Tn2f = (Ti.f.n(1:2:end-1, end) + Ti.f.n(2:2:end, end))/2;
+        Tn2f = (Ti.f.n(1:2:end-1, end) + Ti.f.n(2:2:end, end) + Ti.f.n(1:2:end-1, end-1) + Ti.f.n(2:2:end, end-1))/4;
         Bi.n.l(:, 1) = c1.n.coef*(Tn2f-Ti.n.n(:, 1));
+        %Bi.n.l(:, 1) = c1.fn.coef*(Tn2f-Ti.n.n(:, 1));
         %Bi.n.t = ;
         Tn2c(1:2:end-1) = Ti.c.n(:, 1);
         Tn2c(2:2:end) = Ti.c.n(:, 1);
         %Tn2c = kron(Ti.c.n(:, 1), [1; 1]);
         Bi.n.r(:, end) = c1.n.coef*(Tn2c-Ti.n.n(:, end));
+        %Bi.n.r(:, end) = c1.c.coef*(Tn2c-Ti.n.n(:, end));
+        %Bi.n.r(:, end) = c1.nc.coef*(Tn2c-Ti.n.n(:, end));
         %Bi.n.b = ;
         % update temp
         T.n = Ti.n.n + ... 
@@ -303,8 +322,10 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
 
         % COARSE
         % boundary conditions
-        Tc2n = (Ti.n.n(1:2:end-1, end) + Ti.n.n(2:2:end, end))/2;
+        %Tc2n = (Ti.n.n(1:2:end-1, end) + Ti.n.n(2:2:end, end))/2;
+        Tc2n = (Ti.n.n(1:2:end-1, end) + Ti.n.n(2:2:end, end) + Ti.n.n(1:2:end, end-1) + Ti.n.n(2:2:end, end-1))/4;
         Bi.c.l(:, 1) = c1.c.coef*(Tc2n-Ti.c.n(:, 1));
+        %Bi.c.l(:, 1) = c1.nc.coef*(Tc2n-Ti.c.n(:, 1));
         %Bi.c.t = ;
         %Bi.c.r = ;
         %Bi.c.b = ;
