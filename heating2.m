@@ -55,11 +55,13 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
     nn = n*2;
     nf = n*2*2;
     nx = n*2*2*2;
-
-    wc = nc/2; % fractions must add to 1
-    wn = nn/4;
-    wf = nf/8;
-    wx = nx/8;
+    
+    % fractions must add to 1
+    % n must be multiple of denominator
+    wc = nc*97/100;
+    wn = nn/100;
+    wf = nf/100;
+    wx = nx/100;
 
     % xfine
     dl.x = L/nx;
@@ -123,10 +125,10 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
     % mass stopping power = <1/rho dE/dx>
     msp = bethe(beam.M, mat.A, mat.Z, mat.I, mat.w, mat.rho, beta, 1);
 
-    rho_p.x = densdist(beam.pos, nx, L, 1/8, beam.np, beam.nb, beam.f, beam.sigma, beam.sigma);
-    rho_p.f = densdist(beam.pos-L/8, nf, L, 1/8, beam.np, beam.nb, beam.f, beam.sigma, beam.sigma);
-    rho_p.n = densdist(beam.pos-L/4, nn, L, 1/4, beam.np, beam.nb, beam.f, beam.sigma, beam.sigma);
-    rho_p.c = densdist(beam.pos-L/2, nc, L, 1/2, beam.np, beam.nb, beam.f, beam.sigma, beam.sigma);
+    rho_p.x = densdist(beam.pos, nx, L, 1/100, beam.np, beam.nb, beam.f, beam.sigma, beam.sigma);
+    rho_p.f = densdist(beam.pos-L/8, nf, L, 1/100, beam.np, beam.nb, beam.f, beam.sigma, beam.sigma);
+    rho_p.n = densdist(beam.pos-L/4, nn, L, 1/100, beam.np, beam.nb, beam.f, beam.sigma, beam.sigma);
+    rho_p.c = densdist(beam.pos-L/2, nc, L, 97/100, beam.np, beam.nb, beam.f, beam.sigma, beam.sigma);
 
 
     %% CONVERT UNITS
@@ -138,10 +140,11 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
 
 
     %% ANIMATION OUTPUT PARAMS
-    fps = 100; % frames per simulated second
+    fps = 1000; % frames per simulated second
     nframes = round((dt*fps)^-1); % no. of time steps btwn frames
     frames = round(nt/nframes); % no. of frames total
-    dTframes = zeros(nx/2, nx, frames); % preallocate
+    %dTframes = zeros(nx/2, nx, frames); % preallocate
+    dTframes = zeros(nc/2, nc, frames); % preallocate
 
 
     %% TIME ITERATION
@@ -336,10 +339,17 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
 
         if rem(i, nframes) == 0
             ind = i/nframes;
+            %{
             dTframes(:, 1:wx, ind) = dT.x;
             dTframes(:, wx+1:wx*2, ind) = kron(dT.f, ones(2));
             dTframes(:, (wx*2)+1:wx*4, ind) = kron(dT.n, ones(4));
             dTframes(:, (wx*4)+1:end, ind) = kron(dT.c, ones(8));
+            fprintf('%.4f%% complete. Animation frame captured.\n', 100*i/nt)
+            %}
+            dTframes(:, 1:nc/100, ind) = dT.x(1:8:end, 1:8:end);
+            dTframes(:, (nc/100)+1:2*nc/100, ind) = dT.f(1:4:end, 1:4:end);
+            dTframes(:, (2*nc/100)+1:3*nc/100, ind) = dT.n(1:2:end, 1:2:end);
+            dTframes(:, (3*nc/100)+1:end, ind) = dT.c;
             fprintf('%.4f%% complete. Animation frame captured.\n', 100*i/nt)
             toc
             tic;

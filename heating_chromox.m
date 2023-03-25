@@ -1,10 +1,15 @@
 clc; clear; close all;
 
-res = 4e-6; % finest resolution required
+%{
+res = 5e-6; % finest resolution required
 L = 1e-2; % length of side, m
 nfine = L/res;
 n = round(nfine/8);
 if rem(n, 2) == 1; n = n+1; end % n must be multiple of 2
+%}
+
+L = 1e-2;
+n = 800;
 
 theta = 500e-6; % thickness, m
 
@@ -31,7 +36,7 @@ beam.pos = -3*beam.sigma; % beam centre pos w.r.t. midpoint of left edge, m
 dl = L/(n*8);
 tau = .25;
 dt = tau*(mat.rho*1000*mat.c_p*dl*dl)/mat.k; % time increment, s
-T = 1;
+T = .1;
 nt = round(T/dt);
 T = dt*nt;
 

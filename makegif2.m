@@ -8,7 +8,7 @@ set(gcf, "Position", [x0, y0, width, height])
 
 fprintf("Loading data...\n")
 % load data
-load('4um_500um_1s_3sigma.mat');
+load('test100_8.mat');
 % mirror
 dT_full = [dT; flip(dT, 1)];
 fprintf("Loaded.\n")
@@ -38,6 +38,6 @@ for i = 1:size(dT_full, 3)
     set(gca, "TickDir", 'out')
     colormap(cmap)
     drawnow
-    exportgraphics(gcf,'4um_500um_1s_3sigma.gif','Append',true);
+    exportgraphics(gcf,'test100_8.gif','Append',true);
 end
 fprintf("Done.\n")
