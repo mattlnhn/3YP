@@ -43,6 +43,7 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
     x f n n c c c c     |           f = fine
     x f n n c c c c     |           n = normal
     x f n n c c c c      >  L       c = coarse
+    ----------------------------------------------- line of symmetry
     x f n n c c c c     |
     x f n n c c c c     |
     x f n n c c c c     |
@@ -62,9 +63,9 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
 
     % xfine
     dl.x = L/nx;
-    dT.x = zeros(nx, wx);
-    T0.x = 1.9*ones(nx, wx);
-    T04.x = 1.9^4*ones(nx, wx);
+    dT.x = zeros(nx/2, wx);
+    T0.x = 1.9*ones(nx/2, wx);
+    T04.x = 1.9^4*ones(nx/2, wx);
     E.x.l = dT.x;
     E.x.l(:, 1) = 1;
     E.x.t = dT.x;
@@ -76,9 +77,9 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
 
     % fine
     dl.f = L/nf;
-    dT.f = zeros(nf, wf);
-    T0.f = 1.9*ones(nf, wf);
-    T04.f = 1.9^4*ones(nf, wf);
+    dT.f = zeros(nf/2, wf);
+    T0.f = 1.9*ones(nf/2, wf);
+    T04.f = 1.9^4*ones(nf/2, wf);
     E.f.l = dT.f;
     E.f.l(:, 1) = 1;
     E.f.t = dT.f;
@@ -90,9 +91,9 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
 
     % normal
     dl.n = L/nn;
-    dT.n = zeros(nn, wn);
-    T0.n = 1.9*ones(nn, wn);
-    T04.n = 1.9^4*ones(nn, wn);
+    dT.n = zeros(nn/2, wn);
+    T0.n = 1.9*ones(nn/2, wn);
+    T04.n = 1.9^4*ones(nn/2, wn);
     E.n.l = dT.n;
     E.n.l(:, 1) = 1;
     E.n.t = dT.n;
@@ -104,9 +105,9 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
 
     % coarse
     dl.c = L/nc;
-    dT.c = zeros(nc, wc);
-    T0.c = 1.9*ones(nc, wc);
-    T04.c = 1.9^4*ones(nc, wc);
+    dT.c = zeros(nc/2, wc);
+    T0.c = 1.9*ones(nc/2, wc);
+    T04.c = 1.9^4*ones(nc/2, wc);
     E.c.l = dT.c;
     E.c.l(:, 1) = 1;
     E.c.t = dT.c;
@@ -123,9 +124,9 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
     msp = bethe(beam.M, mat.A, mat.Z, mat.I, mat.w, mat.rho, beta, 1);
 
     rho_p.x = densdist(beam.pos, nx, L, 1/8, beam.np, beam.nb, beam.f, beam.sigma, beam.sigma);
-    rho_p.f = densdist(beam.pos-[L/8 0], nf, L, 1/8, beam.np, beam.nb, beam.f, beam.sigma, beam.sigma);
-    rho_p.n = densdist(beam.pos-[L/4 0], nn, L, 1/4, beam.np, beam.nb, beam.f, beam.sigma, beam.sigma);
-    rho_p.c = densdist(beam.pos-[L/2 0], nc, L, 1/2, beam.np, beam.nb, beam.f, beam.sigma, beam.sigma);
+    rho_p.f = densdist(beam.pos-L/8, nf, L, 1/8, beam.np, beam.nb, beam.f, beam.sigma, beam.sigma);
+    rho_p.n = densdist(beam.pos-L/4, nn, L, 1/4, beam.np, beam.nb, beam.f, beam.sigma, beam.sigma);
+    rho_p.c = densdist(beam.pos-L/2, nc, L, 1/2, beam.np, beam.nb, beam.f, beam.sigma, beam.sigma);
 
 
     %% CONVERT UNITS
@@ -140,7 +141,7 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
     fps = 100; % frames per simulated second
     nframes = round((dt*fps)^-1); % no. of time steps btwn frames
     frames = round(nt/nframes); % no. of frames total
-    dTframes = zeros(nx, nx, frames); % preallocate
+    dTframes = zeros(nx/2, nx, frames); % preallocate
 
 
     %% TIME ITERATION
@@ -151,19 +152,11 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
     c1.f.coef = (mat.k*dt)/(mat.rho*mat.c_p*dl.f*dl.f);
     c1.n.coef = (mat.k*dt)/(mat.rho*mat.c_p*dl.n*dl.n);
     c1.c.coef = (mat.k*dt)/(mat.rho*mat.c_p*dl.c*dl.c);
-    % inner boundary coefficients
-    %c1.xf.coef = (mat.k*dt)/(mat.rho*mat.c_p*dl.x*.5*(dl.x+dl.f));
-    %c1.fn.coef = (mat.k*dt)/(mat.rho*mat.c_p*dl.f*.5*(dl.f+dl.n));
-    %c1.nc.coef = (mat.k*dt)/(mat.rho*mat.c_p*dl.n*.5*(dl.n+dl.c));
-    c1.xf.coef = (mat.k*dt)/(mat.rho*mat.c_p*dl.x*dl.f);
-    c1.fn.coef = (mat.k*dt)/(mat.rho*mat.c_p*dl.f*dl.n);
-    c1.nc.coef = (mat.k*dt)/(mat.rho*mat.c_p*dl.n*dl.c);
 
-
-    c2.x.coef = (dt)/(mat.rho*mat.c_p*dl.x*dl.x*theta); % boundary node
-    c2.f.coef = (dt)/(mat.rho*mat.c_p*dl.f*dl.f*theta);
-    c2.n.coef = (dt)/(mat.rho*mat.c_p*dl.n*dl.n*theta);
-    c2.c.coef = (dt)/(mat.rho*mat.c_p*dl.c*dl.c*theta);
+    %c2.x.coef = (dt)/(mat.rho*mat.c_p*dl.x*dl.x*theta); % boundary node
+    %c2.f.coef = (dt)/(mat.rho*mat.c_p*dl.f*dl.f*theta);
+    %c2.n.coef = (dt)/(mat.rho*mat.c_p*dl.n*dl.n*theta);
+    %c2.c.coef = (dt)/(mat.rho*mat.c_p*dl.c*dl.c*theta);
     % if rho_p constant w.r.t. t
     c3.x = (dt*msp*rho_p.x)/mat.c_p; % protons
     c3.f = (dt*msp*rho_p.f)/mat.c_p;
@@ -226,12 +219,14 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
     Bi.c.b = dT.c;
 
     % inner boundaries
-    Tx2f = zeros(nx, 1); % xfine to fine
-    Tf2x = zeros(nf, 1); % fine to xfine
-    Tf2n = zeros(nf, 1); % fine to normal
-    Tn2f = zeros(nn, 1); % etc.
-    Tn2c = zeros(nn, 1);
-    Tc2n = zeros(nc, 1);
+    Tx2f = zeros(nx/2, 1); % xfine to fine
+    Tf2x = zeros(nf/2, 1); % fine to xfine
+    Tf2n = zeros(nf/2, 1); % fine to normal
+    Tn2f = zeros(nn/2, 1); % etc.
+    Tn2c = zeros(nn/2, 1);
+    Tc2n = zeros(nc/2, 1);
+
+    tic;
 
     while i <= nt
         %tic;
@@ -346,6 +341,8 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam)
             dTframes(:, (wx*2)+1:wx*4, ind) = kron(dT.n, ones(4));
             dTframes(:, (wx*4)+1:end, ind) = kron(dT.c, ones(8));
             fprintf('%.4f%% complete. Animation frame captured.\n', 100*i/nt)
+            toc
+            tic;
         end
 
         i = i + 1;
