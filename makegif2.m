@@ -8,9 +8,9 @@ set(gcf, "Position", [x0, y0, width, height])
 
 fprintf("Loading data...\n")
 % load data
-load('par_1cm_800n_0.1s_3.0-3.3.mat');
-%dT_half = dT(:, :, 1:end-1); % single thread
-dT_half = dT(:, :, :, 4); % parallel
+load('restructure_test.mat');
+dT_half = dT(:, :, 1:end-1); % single thread
+%dT_half = dT(:, :, :, 4); % parallel
 % mirror
 dT_full = [dT_half; flip(dT_half, 1)];
 fprintf("Loaded.\n")
@@ -40,6 +40,6 @@ for i = 1:size(dT_full, 3)
     set(gca, "TickDir", 'out')
     colormap(cmap)
     drawnow
-    exportgraphics(gcf,'par_1cm_800n_0.1s_3.3.gif','Append',true);
+    exportgraphics(gcf,'restructure_test.gif','Append',true);
 end
 fprintf("Done.\n")

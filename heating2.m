@@ -33,7 +33,7 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam, beampos)
 %   called
 
     %% PHYSICAL CONSTANTS
-    const.sigma = 5.670374419e-8; % stefan-boltzmann, W m-2 K-4
+    const_sigma = 5.670374419e-8; % stefan-boltzmann, W m-2 K-4
     
     %% FIX FOR PARFOR
     beam.pos = beampos;
@@ -53,60 +53,68 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam, beampos)
     wx = nx/100;
 
     % xfine
-    dl.x = L/nx;
-    dT.x = zeros(nx/2, wx);
-    T0.x = 1.9*ones(nx/2, wx);
-    T04.x = 1.9^4*ones(nx/2, wx);
-    E.x.l = dT.x;
-    E.x.l(:, 1) = 1;
-    E.x.t = dT.x;
-    E.x.t(1, :) = 1;
-    E.x.r = dT.x;
-    E.x.r(:, end) = 1;
-    E.x.b = dT.x;
-    E.x.b(end, :) = 1;
+    dlx = L/nx;
+    dTx = zeros(nx/2, wx);
+
+    T0x = 1.9*ones(nx/2, wx);
+    T04x = 1.9^4*ones(nx/2, wx);
+
+    Exl = dTx;
+    Exl(:, 1) = 1;
+    Ext = dTx;
+    Ext(1, :) = 1;
+    Exr = dTx;
+    Exr(:, end) = 1;
+    Exb = dTx;
+    Exb(end, :) = 1;
 
     % fine
-    dl.f = L/nf;
-    dT.f = zeros(nf/2, wf);
-    T0.f = 1.9*ones(nf/2, wf);
-    T04.f = 1.9^4*ones(nf/2, wf);
-    E.f.l = dT.f;
-    E.f.l(:, 1) = 1;
-    E.f.t = dT.f;
-    E.f.t(1, :) = 1;
-    E.f.r = dT.f;
-    E.f.r(:, end) = 1;
-    E.f.b = dT.f;
-    E.f.b(end, :) = 1;
+    dlf = L/nf;
+    dTf = zeros(nf/2, wf);
+
+    T0f = 1.9*ones(nf/2, wf);
+    T04f = 1.9^4*ones(nf/2, wf);
+
+    Efl = dTf;
+    Efl(:, 1) = 1;
+    Eft = dTf;
+    Eft(1, :) = 1;
+    Efr = dTf;
+    Efr(:, end) = 1;
+    Efb = dTf;
+    Efb(end, :) = 1;
 
     % normal
-    dl.n = L/nn;
-    dT.n = zeros(nn/2, wn);
-    T0.n = 1.9*ones(nn/2, wn);
-    T04.n = 1.9^4*ones(nn/2, wn);
-    E.n.l = dT.n;
-    E.n.l(:, 1) = 1;
-    E.n.t = dT.n;
-    E.n.t(1, :) = 1;
-    E.n.r = dT.n;
-    E.n.r(:, end) = 1;
-    E.n.b = dT.n;
-    E.n.b(end, :) = 1;
+    dln = L/nn;
+    dTn = zeros(nn/2, wn);
+
+    T0n = 1.9*ones(nn/2, wn);
+    T04n = 1.9^4*ones(nn/2, wn);
+
+    Enl = dTn;
+    Enl(:, 1) = 1;
+    Ent = dTn;
+    Ent(1, :) = 1;
+    Enr = dTn;
+    Enr(:, end) = 1;
+    Enb = dTn;
+    Enb(end, :) = 1;
 
     % coarse
-    dl.c = L/nc;
-    dT.c = zeros(nc/2, wc);
-    T0.c = 1.9*ones(nc/2, wc);
-    T04.c = 1.9^4*ones(nc/2, wc);
-    E.c.l = dT.c;
-    E.c.l(:, 1) = 1;
-    E.c.t = dT.c;
-    E.c.t(1, :) = 1;
-    E.c.r = dT.c;
-    E.c.r(:, end) = 1;
-    E.c.b = dT.c;
-    E.c.b(end, :) = 1;
+    dlc = L/nc;
+    dTc = zeros(nc/2, wc);
+
+    T0c = 1.9*ones(nc/2, wc);
+    T04c = 1.9^4*ones(nc/2, wc);
+
+    Ecl = dTc;
+    Ecl(:, 1) = 1;
+    Ect = dTc;
+    Ect(1, :) = 1;
+    Ecr = dTc;
+    Ecr(:, end) = 1;
+    Ecb = dTc;
+    Ecb(end, :) = 1;
     
 
     %% ENERGY DEPOSITION
@@ -114,13 +122,13 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam, beampos)
     % mass stopping power = <1/rho dE/dx>
     msp = bethe(beam.M, mat.A, mat.Z, mat.I, mat.w, mat.rho, beta, 1);
 
-    rho_p.x = densdist(beam.pos, nx, L, 1/100, beam.np, beam.nb, ...
+    rho_px = densdist(beam.pos, nx, L, 1/100, beam.np, beam.nb, ...
         beam.f, beam.sigma, beam.sigma);
-    rho_p.f = densdist(beam.pos-L/100, nf, L, 1/100, beam.np, beam.nb, ...
+    rho_pf = densdist(beam.pos-L/100, nf, L, 1/100, beam.np, beam.nb, ...
         beam.f, beam.sigma, beam.sigma);
-    rho_p.n = densdist(beam.pos-2*L/100, nn, L, 1/100, beam.np, ...
+    rho_pn = densdist(beam.pos-2*L/100, nn, L, 1/100, beam.np, ...
         beam.nb, beam.f, beam.sigma, beam.sigma);
-    rho_p.c = densdist(beam.pos-3*L/100, nc, L, 97/100, beam.np, ...
+    rho_pc = densdist(beam.pos-3*L/100, nc, L, 97/100, beam.np, ...
         beam.nb, beam.f, beam.sigma, beam.sigma);
 
 
@@ -142,191 +150,172 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam, beampos)
     %% TIME ITERATION
     i = 1;
 
-    % coefficients
-    c1.x.coef = (mat.k*dt)/(mat.rho*mat.c_p*dl.x*dl.x); % inner node
-    c1.f.coef = (mat.k*dt)/(mat.rho*mat.c_p*dl.f*dl.f);
-    c1.n.coef = (mat.k*dt)/(mat.rho*mat.c_p*dl.n*dl.n);
-    c1.c.coef = (mat.k*dt)/(mat.rho*mat.c_p*dl.c*dl.c);
-    %c2.x.coef = (dt)/(mat.rho*mat.c_p*dl.x*dl.x*theta); % boundary node
-    %c2.f.coef = (dt)/(mat.rho*mat.c_p*dl.f*dl.f*theta);
-    %c2.n.coef = (dt)/(mat.rho*mat.c_p*dl.n*dl.n*theta);
-    %c2.c.coef = (dt)/(mat.rho*mat.c_p*dl.c*dl.c*theta);
-    % if rho_p constant w.r.t. t
-    c3.x = (dt*msp*rho_p.x)/mat.c_p; % protons
-    c3.f = (dt*msp*rho_p.f)/mat.c_p;
-    c3.n = (dt*msp*rho_p.n)/mat.c_p;
-    c3.c = (dt*msp*rho_p.c)/mat.c_p;
-    % if not, include rho_p term in calculation later
-    %c3 = (dt*msp)/mat.c_p; % protons
-    c4 = (2*mat.epsilon*const.sigma*dt)/(mat.rho*mat.c_p*theta); % rad
-    c4edge.x = (2*mat.epsilon*const.sigma*dt)/(mat.rho*mat.c_p*dl.x);
-    c4edge.f = (2*mat.epsilon*const.sigma*dt)/(mat.rho*mat.c_p*dl.f);
-    c4edge.n = (2*mat.epsilon*const.sigma*dt)/(mat.rho*mat.c_p*dl.n);
-    c4edge.c = (2*mat.epsilon*const.sigma*dt)/(mat.rho*mat.c_p*dl.c);
+    % inner node conduction coefficients
+    c1x = (mat.k*dt)/(mat.rho*mat.c_p*dlx*dlx); % xfine
+    c1f = (mat.k*dt)/(mat.rho*mat.c_p*dlf*dlf); % fine
+    c1n = (mat.k*dt)/(mat.rho*mat.c_p*dln*dln); % normal
+    c1c = (mat.k*dt)/(mat.rho*mat.c_p*dlc*dlc); % coarse
 
-    c1.x.l = c1.x.coef*not(E.x.l);
-    c1.x.t = c1.x.coef*not(E.x.t);
-    c1.x.r = c1.x.coef*not(E.x.r);
-    c1.x.b = c1.x.coef*not(E.x.b);
-    c1.f.l = c1.f.coef*not(E.f.l);
-    c1.f.t = c1.f.coef*not(E.f.t);
-    c1.f.r = c1.f.coef*not(E.f.r);
-    c1.f.b = c1.f.coef*not(E.f.b);
-    c1.n.l = c1.n.coef*not(E.n.l);
-    c1.n.t = c1.n.coef*not(E.n.t);
-    c1.n.r = c1.n.coef*not(E.n.r);
-    c1.n.b = c1.n.coef*not(E.n.b);
-    c1.c.l = c1.c.coef*not(E.c.l);
-    c1.c.t = c1.c.coef*not(E.c.t);
-    c1.c.r = c1.c.coef*not(E.c.r);
-    c1.c.b = c1.c.coef*not(E.c.b);
+    % proton energy deposition coefficients
+    c3x = (dt*msp*rho_px)/mat.c_p; % xfine
+    c3f = (dt*msp*rho_pf)/mat.c_p; % fine
+    c3n = (dt*msp*rho_pn)/mat.c_p; % normal
+    c3c = (dt*msp*rho_pc)/mat.c_p; % coarse
 
-    Ti.x.l = dT.x;
-    Ti.x.t = dT.x;
-    Ti.x.r = dT.x;
-    Ti.x.b = dT.x;
-    Ti.f.l = dT.f;
-    Ti.f.t = dT.f;
-    Ti.f.r = dT.f;
-    Ti.f.b = dT.f;
-    Ti.n.l = dT.n;
-    Ti.n.t = dT.n;
-    Ti.n.r = dT.n;
-    Ti.n.b = dT.n;
-    Ti.c.l = dT.c;
-    Ti.c.t = dT.c;
-    Ti.c.r = dT.c;
-    Ti.c.b = dT.c;
+    % radiation
+    % all cells
+    c4 = (2*mat.epsilon*const_sigma*dt)/(mat.rho*mat.c_p*theta);
+    % xfine boundary
+    c4Ex = (2*mat.epsilon*const_sigma*dt)/(mat.rho*mat.c_p*dlx);
+    % fine boundary
+    c4Ef = (2*mat.epsilon*const_sigma*dt)/(mat.rho*mat.c_p*dlf);
+    % normal boundary
+    c4En = (2*mat.epsilon*const_sigma*dt)/(mat.rho*mat.c_p*dln);
+    % coarse boundary
+    c4Ec = (2*mat.epsilon*const_sigma*dt)/(mat.rho*mat.c_p*dlc);
 
-    Bi.x.l = dT.x;
-    Bi.x.t = dT.x;
-    Bi.x.r = dT.x;
-    Bi.x.b = dT.x;
-    Bi.f.l = dT.f;
-    Bi.f.t = dT.f;
-    Bi.f.r = dT.f;
-    Bi.f.b = dT.f;
-    Bi.n.l = dT.n;
-    Bi.n.t = dT.n;
-    Bi.n.r = dT.n;
-    Bi.n.b = dT.n;
-    Bi.c.l = dT.c;
-    Bi.c.t = dT.c;
-    Bi.c.r = dT.c;
-    Bi.c.b = dT.c;
+    % pre-calculate conduction coefficient matrices
+    c1xl = c1x*not(Exl); % xfine excluding left edge
+    c1xt = c1x*not(Ext); % xfine excluding top edge
+    c1xr = c1x*not(Exr); % xfine excluding right edge
+    c1xb = c1x*not(Exb); % xfine excluding bottom edge
+    c1fl = c1f*not(Efl); % fine etc.
+    c1ft = c1f*not(Eft);
+    c1fr = c1f*not(Efr);
+    c1fb = c1f*not(Efb);
+    c1nl = c1n*not(Enl); % normal etc.
+    c1nt = c1n*not(Ent);
+    c1nr = c1n*not(Enr);
+    c1nb = c1n*not(Enb);
+    c1cl = c1c*not(Ecl); % coarse etc.
+    c1ct = c1c*not(Ect);
+    c1cr = c1c*not(Ecr);
+    c1cb = c1c*not(Ecb);
+
+    % preallocate matrices for boundary conditions
+    Bixl = dTx; % xfine left
+    Bixt = dTx; % xfine top
+    Bixr = dTx; % xfine right
+    Bixb = dTx; % xfine bottom
+    Bifl = dTf; % fine etc.
+    Bift = dTf;
+    Bifr = dTf;
+    Bifb = dTf;
+    Binl = dTn; % normal etc.
+    Bint = dTn;
+    Binr = dTn;
+    Binb = dTn;
+    Bicl = dTc; % coarse etc.
+    Bict = dTc;
+    Bicr = dTc;
+    Bicb = dTc;
 
     % inner boundaries
     Tx2f = zeros(nx/2, 1); % xfine to fine
     Tf2x = zeros(nf/2, 1); % fine to xfine
     Tf2n = zeros(nf/2, 1); % fine to normal
-    Tn2f = zeros(nn/2, 1); % etc.
-    Tn2c = zeros(nn/2, 1);
-    Tc2n = zeros(nc/2, 1);
+    Tn2f = zeros(nn/2, 1); % normal to fine
+    Tn2c = zeros(nn/2, 1); % normal to coarse
+    Tc2n = zeros(nc/2, 1); % coarse to normal
 
     starttime = tic;
 
     while i <= nt
-        %tic;
 
         % node temps
-        Ti.x.n = dT.x + T0.x;
-        Ti.f.n = dT.f + T0.f;
-        Ti.n.n = dT.n + T0.n;
-        Ti.c.n = dT.c + T0.c;
-        Ti.x.n4 = Ti.x.n.*Ti.x.n.*Ti.x.n.*Ti.x.n;
-        Ti.f.n4 = Ti.f.n.*Ti.f.n.*Ti.f.n.*Ti.f.n;
-        Ti.n.n4 = Ti.n.n.*Ti.n.n.*Ti.n.n.*Ti.n.n;
-        Ti.c.n4 = Ti.c.n.*Ti.c.n.*Ti.c.n.*Ti.c.n;
+        Tixn = dTx + T0x; % T^i_node xfine
+        Tifn = dTf + T0f; % T^i_node fine
+        Tinn = dTn + T0n; % T^i_node normal
+        Ticn = dTc + T0c; % T^i_node coarse
+        Tixn4 = Tixn.*Tixn.*Tixn.*Tixn; % (T^i_node)^4 xfine
+        Tifn4 = Tifn.*Tifn.*Tifn.*Tifn; % (T^i_node)^4 fine
+        Tinn4 = Tinn.*Tinn.*Tinn.*Tinn; % (T^i_node)^4 normal
+        Ticn4 = Ticn.*Ticn.*Ticn.*Ticn; % (T^i_node)^4 coarse
 
         % XFINE
         % boundary conditions
-        Bi.x.l(:, 1) = -c4edge.x*(Ti.x.n4(:, 1)-T04.x(:, 1));
-        Bi.x.t(1, :) = -c4edge.x*(Ti.x.n4(1, :)-T04.x(1, :));
-        Tx2f(1:2:end-1) = Ti.f.n(:, 1);
-        Tx2f(2:2:end) = Ti.f.n(:, 1);
-        %Tx2f = kron(Ti.f.n(:, 1), [1; 1]);
-        Bi.x.r(:, end) = c1.x.coef*(Tx2f-Ti.x.n(:, end));
-        Bi.x.b(end, :) = -c4edge.x*(Ti.x.n4(end, :)-T04.x(end, :));
+        Bixl(:, 1) = -c4Ex*(Tixn4(:, 1)-T04x(:, 1)); % rad
+        Bixt(1, :) = -c4Ex*(Tixn4(1, :)-T04x(1, :)); % rad
+        Tx2f(1:2:end-1) = Tifn(:, 1);
+        Tx2f(2:2:end) = Tifn(:, 1);
+        Bixr(:, end) = c1x*(Tx2f-Tixn(:, end)); % cond
+        Bixb(end, :) = -c4Ex*(Tixn4(end, :)-T04x(end, :)); % rad
         % update temp
-        T.x = Ti.x.n + ...
-              c1.x.l.*(circshift(Ti.x.n, [0 1])-Ti.x.n) + Bi.x.l + ...
-              c1.x.t.*(circshift(Ti.x.n, [1 0])-Ti.x.n) + Bi.x.t + ...
-              c1.x.r.*(circshift(Ti.x.n, [0 -1])-Ti.x.n) + Bi.x.r + ...
-              c1.x.b.*(circshift(Ti.x.n, [-1 0])-Ti.x.n) + Bi.x.b + ...
-              c3.x + ...
-              -c4*(Ti.x.n4-T04.x);
-        dT.x = T.x - T0.x;
+        Tx = Tixn + ...
+              c1xl.*(circshift(Tixn, [0 1])-Tixn) + Bixl + ...
+              c1xt.*(circshift(Tixn, [1 0])-Tixn) + Bixt + ...
+              c1xr.*(circshift(Tixn, [0 -1])-Tixn) + Bixr + ...
+              c1xb.*(circshift(Tixn, [-1 0])-Tixn) + Bixb + ...
+              c3x + ...
+              -c4*(Tixn4-T04x);
+        dTx = Tx - T0x;
 
 
         % FINE
         % boundary conditions
-        Tf2x = (Ti.x.n(1:2:end-1, end) + Ti.x.n(2:2:end, end) + ...
-            Ti.x.n(1:2:end-1, end-1) + Ti.x.n(2:2:end, end-1))/4;
-        Bi.f.l(:, 1) = c1.f.coef*(Tf2x-Ti.f.n(:, 1));
-        %Bi.f.l(:, 1) = c1.xf.coef*(Tf2x-Ti.f.n(:, 1));
-        Bi.f.t(1, :) = -c4edge.f*(Ti.f.n4(1, :)-T04.f(1, :));
-        Tf2n(1:2:end-1) = Ti.n.n(:, 1);
-        Tf2n(2:2:end) = Ti.n.n(:, 1);
-        %Tf2n = kron(Ti.n.n(:, 1), [1; 1]);
-        Bi.f.r(:, end) = c1.f.coef*(Tf2n-Ti.f.n(:, end));
-        Bi.f.b(end, :) = -c4edge.f*(Ti.f.n4(end, :)-T04.f(end, :));
+        Tf2x = (Tixn(1:2:end-1, end) + Tixn(2:2:end, end) + ...
+            Tixn(1:2:end-1, end-1) + Tixn(2:2:end, end-1))/4;
+        Bifl(:, 1) = c1f*(Tf2x-Tifn(:, 1)); % cond
+        Bift(1, :) = -c4Ef*(Tifn4(1, :)-T04f(1, :)); % rad
+        Tf2n(1:2:end-1) = Tinn(:, 1);
+        Tf2n(2:2:end) = Tinn(:, 1);
+        Bifr(:, end) = c1f*(Tf2n-Tifn(:, end)); % cond
+        Bifb(end, :) = -c4Ef*(Tifn4(end, :)-T04f(end, :)); % rad
         % update temp
-        T.f = Ti.f.n + ... 
-              c1.f.l.*(circshift(Ti.f.n, [0 1])-Ti.f.n) + Bi.f.l + ...
-              c1.f.t.*(circshift(Ti.f.n, [1 0])-Ti.f.n) + Bi.f.t + ...
-              c1.f.r.*(circshift(Ti.f.n, [0 -1])-Ti.f.n) + Bi.f.r + ...
-              c1.f.b.*(circshift(Ti.f.n, [-1 0])-Ti.f.n) + Bi.f.b + ...
-              c3.f + ...
-              -c4*(Ti.f.n4-T04.f);
-        dT.f = T.f - T0.f;
+        Tf = Tifn + ... 
+              c1fl.*(circshift(Tifn, [0 1])-Tifn) + Bifl + ...
+              c1ft.*(circshift(Tifn, [1 0])-Tifn) + Bift + ...
+              c1fr.*(circshift(Tifn, [0 -1])-Tifn) + Bifr + ...
+              c1fb.*(circshift(Tifn, [-1 0])-Tifn) + Bifb + ...
+              c3f + ...
+              -c4*(Tifn4-T04f);
+        dTf = Tf - T0f;
 
 
         % NORMAL
         % boundary conditions
-        Tn2f = (Ti.f.n(1:2:end-1, end) + Ti.f.n(2:2:end, end) + ...
-            Ti.f.n(1:2:end-1, end-1) + Ti.f.n(2:2:end, end-1))/4;
-        Bi.n.l(:, 1) = c1.n.coef*(Tn2f-Ti.n.n(:, 1));
-        %Bi.n.l(:, 1) = c1.fn.coef*(Tn2f-Ti.n.n(:, 1));
-        Bi.n.t(1, :) = -c4edge.n*(Ti.n.n4(1, :)-T04.n(1, :));
-        Tn2c(1:2:end-1) = Ti.c.n(:, 1);
-        Tn2c(2:2:end) = Ti.c.n(:, 1);
-        %Tn2c = kron(Ti.c.n(:, 1), [1; 1]);
-        Bi.n.r(:, end) = c1.n.coef*(Tn2c-Ti.n.n(:, end));
-        Bi.n.b(end, :) = -c4edge.n*(Ti.n.n4(end, :)-T04.n(end, :));
+        Tn2f = (Tifn(1:2:end-1, end) + Tifn(2:2:end, end) + ...
+            Tifn(1:2:end-1, end-1) + Tifn(2:2:end, end-1))/4;
+        Binl(:, 1) = c1n*(Tn2f-Tinn(:, 1)); % cond
+        Bint(1, :) = -c4En*(Tinn4(1, :)-T04n(1, :)); % rad
+        Tn2c(1:2:end-1) = Ticn(:, 1);
+        Tn2c(2:2:end) = Ticn(:, 1);
+        Binr(:, end) = c1n*(Tn2c-Tinn(:, end)); % cond
+        Binb(end, :) = -c4En*(Tinn4(end, :)-T04n(end, :)); % rad
         % update temp
-        T.n = Ti.n.n + ... 
-              c1.n.l.*(circshift(Ti.n.n, [0 1])-Ti.n.n) + Bi.n.l + ...
-              c1.n.t.*(circshift(Ti.n.n, [1 0])-Ti.n.n) + Bi.n.t + ...
-              c1.n.r.*(circshift(Ti.n.n, [0 -1])-Ti.n.n) + Bi.n.r + ...
-              c1.n.b.*(circshift(Ti.n.n, [-1 0])-Ti.n.n) + Bi.n.b + ...
-              c3.n + ...
-              -c4*(Ti.n.n4-T04.n);
-        dT.n = T.n - T0.n;
+        Tn = Tinn + ... 
+              c1nl.*(circshift(Tinn, [0 1])-Tinn) + Binl + ...
+              c1nt.*(circshift(Tinn, [1 0])-Tinn) + Bint + ...
+              c1nr.*(circshift(Tinn, [0 -1])-Tinn) + Binr + ...
+              c1nb.*(circshift(Tinn, [-1 0])-Tinn) + Binb + ...
+              c3n + ...
+              -c4*(Tinn4-T04n);
+        dTn = Tn - T0n;
 
         % COARSE
         % boundary conditions
-        Tc2n = (Ti.n.n(1:2:end-1, end) + Ti.n.n(2:2:end, end) + ...
-            Ti.n.n(1:2:end, end-1) + Ti.n.n(2:2:end, end-1))/4;
-        Bi.c.l(:, 1) = c1.c.coef*(Tc2n-Ti.c.n(:, 1));
-        Bi.c.t(1, :) = -c4edge.c*(Ti.c.n4(1, :)-T04.c(1, :));
-        Bi.c.r(:, end) = -c4edge.c*(Ti.c.n4(:, end)-T04.c(:, end));
-        Bi.c.b(end, :) = -c4edge.c*(Ti.c.n4(end, :)-T04.c(end, :));
+        Tc2n = (Tinn(1:2:end-1, end) + Tinn(2:2:end, end) + ...
+            Tinn(1:2:end, end-1) + Tinn(2:2:end, end-1))/4;
+        Bicl(:, 1) = c1c*(Tc2n-Ticn(:, 1)); % cond
+        Bict(1, :) = -c4Ec*(Ticn4(1, :)-T04c(1, :)); % rad
+        Bicr(:, end) = -c4Ec*(Ticn4(:, end)-T04c(:, end)); % rad
+        Bicb(end, :) = -c4Ec*(Ticn4(end, :)-T04c(end, :)); % rad
         % update temp
-        T.c = Ti.c.n + ... 
-              c1.c.l.*(circshift(Ti.c.n, [0 1])-Ti.c.n) + Bi.c.l + ...
-              c1.c.t.*(circshift(Ti.c.n, [1 0])-Ti.c.n) + Bi.c.t + ...
-              c1.c.r.*(circshift(Ti.c.n, [0 -1])-Ti.c.n) + Bi.c.r + ...
-              c1.c.b.*(circshift(Ti.c.n, [-1 0])-Ti.c.n) + Bi.c.b + ...
-              c3.c + ...
-              -c4*(Ti.c.n4-T04.c);
-        dT.c = T.c - T0.c;
+        Tc = Ticn + ... 
+              c1cl.*(circshift(Ticn, [0 1])-Ticn) + Bicl + ...
+              c1ct.*(circshift(Ticn, [1 0])-Ticn) + Bict + ...
+              c1cr.*(circshift(Ticn, [0 -1])-Ticn) + Bicr + ...
+              c1cb.*(circshift(Ticn, [-1 0])-Ticn) + Bicb + ...
+              c3c + ...
+              -c4*(Ticn4-T04c);
+        dTc = Tc - T0c;
 
         if rem(i, nframes) == 0
             ind = i/nframes;
-            dTframes(:, 1:nn/100, ind) = dT.x(1:4:end, 1:4:end);
-            dTframes(:, (nn/100)+1:2*nn/100, ind) = dT.f(1:2:end, 1:2:end);
-            dTframes(:, (2*nn/100)+1:3*nn/100, ind) = dT.n;
-            dTframes(:, (3*nn/100)+1:end, ind) = kron(dT.c, ones(2));
+            dTframes(:, 1:nn/100, ind) = dTx(1:4:end, 1:4:end);
+            dTframes(:, (nn/100)+1:2*nn/100, ind) = dTf(1:2:end, 1:2:end);
+            dTframes(:, (2*nn/100)+1:3*nn/100, ind) = dTn;
+            dTframes(:, (3*nn/100)+1:end, ind) = kron(dTc, ones(2));
             endtime = toc(starttime);
             fprintf('%.4f%% complete in %.4f s. Animation frame captured.\n', 100*i/nt, endtime)
             starttime = tic;
@@ -334,7 +323,6 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam, beampos)
 
         i = i + 1;
 
-        %toc;
     end
 
 end

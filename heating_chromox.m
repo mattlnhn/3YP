@@ -9,7 +9,7 @@ if rem(n, 2) == 1; n = n+1; end % n must be multiple of 2
 %}
 
 L = 1e-2;
-n = 100;
+n = 1000;
 
 theta = 500e-6; % thickness, m
 
@@ -41,7 +41,7 @@ nt = round(T/dt);
 T = dt*nt;
 
 fprintf('dt = %d s with %d time steps for total simulation time %d s\nEnter to continue...\n', dt, nt, T)
-%pause()
+pause()
 
 total_time = tic;
 dT = heating2(n, L, theta, dt, nt, mat, beam, beam.pos);
