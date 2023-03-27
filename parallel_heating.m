@@ -1,15 +1,10 @@
-clc; clear; close all;
+clear
+close all
+clc
 
-%{
-res = 5e-6; % finest resolution required
-L = 1e-2; % length of side, m
-nfine = L/res;
-n = round(nfine/8);
-if rem(n, 2) == 1; n = n+1; end % n must be multiple of 2
-%}
-
+parpool('Processes', 4)
 L = 1e-2;
-n = 100;
+n = 800;
 
 theta = 500e-6; % thickness, m
 
@@ -31,7 +26,10 @@ beam.nb = 2808; % no. of bunches
 beam.beta_star = 0.15;
 beam.epsilon_n = 2.50e-6;
 beam.sigma = sqrt(beam.beta_star*beam.epsilon_n/beam.gamma);
-beam.pos = -3*beam.sigma; % beam centre pos w.r.t. midpoint of left edge, m
+%beam.pos = -3*beam.sigma; % beam centre pos w.r.t. midpoint of left edge, m
+
+sigma_range = [3.0, 3.1, 3.2, 3.3];
+beampos = -sigma_range.*beam.sigma;
 
 dl = L/(n*8);
 tau = .25;
@@ -40,9 +38,12 @@ T = .1;
 nt = round(T/dt);
 T = dt*nt;
 
-fprintf('dt = %d s with %d time steps for total simulation time %d s\nEnter to continue...\n', dt, nt, T)
-%pause()
+dT = zeros(n, 2*n, 100, 4);
 
 total_time = tic;
-dT = heating2(n, L, theta, dt, nt, mat, beam, beam.pos);
+parfor i = 1:4
+    dT(:, :, :, i) = heating2(n, L, theta, dt, nt, mat, beam, beampos(i));
+end
 toc(total_time)
+
+delete(gcp)
