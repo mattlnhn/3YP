@@ -1,15 +1,10 @@
 clc; clear; close all;
 
-%{
-res = 5e-6; % finest resolution required
-L = 1e-2; % length of side, m
-nfine = L/res;
-n = round(nfine/8);
-if rem(n, 2) == 1; n = n+1; end % n must be multiple of 2
-%}
-
 L = 1e-2;
-n = 800; % multiple of 100
+dl = 2.5e-5;
+Lf = 1e-4;
+dlf = 1e-6;
+m = round(dl/dlf);
 
 theta = 500e-6; % thickness, m
 
@@ -27,16 +22,14 @@ beam.gamma = 7460.69; % Lorentz factor
 beam.f = 11.2e3;  % bunches per second, Hz
 beam.np = 1.15e11; % protons per bunch (nominal 25ns spacing)
 beam.nb = 2808; % no. of bunches
-%beam.sigma = 2.5e-6; % beam width, m
 beam.beta_star = 0.15;
 beam.epsilon_n = 2.50e-6;
 beam.sigma = sqrt(beam.beta_star*beam.epsilon_n/beam.gamma);
 beam.pos = -3*beam.sigma; % beam centre pos w.r.t. midpoint of left edge, m
 
-dl = L/(n*8);
 tau = .25;
-dt = tau*(mat.rho*1000*mat.c_p*dl*dl)/mat.k; % time increment, s
-T = .1;
+dt = tau*(mat.rho*1000*mat.c_p*dlf*dlf)/mat.k; % time increment, s
+T = 1e-2;
 nt = round(T/dt);
 T = dt*nt;
 
@@ -44,5 +37,17 @@ fprintf('dt = %d s with %d time steps for total simulation time %d s\nEnter to c
 pause()
 
 total_time = tic;
-dT = heating2(n, L, theta, dt, nt, mat, beam, beam.pos);
+[dT1, dT2, dT3, dT4] = heating2(dlf, Lf, dl, L, theta, dt, nt, 100, mat, beam);
 toc(total_time)
+
+dT2up = kron(dT2, ones(m));
+dT3up = kron(dT3, ones(m));
+dT4up = kron(dT4, ones(m));
+
+dTL = [dT2up; dT1; dT3up];
+dTfinal = [dTL dT4up];
+
+figure()
+imagesc(dTfinal)
+colorbar
+axis square

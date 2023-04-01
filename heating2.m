@@ -1,4 +1,4 @@
-function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam, beampos)
+function [dT1, dT2, dT3, dT4] = heating2(dlf, Lf, dl, L, theta, dt, nt, fps, mat, beam)
 % HEATING
 %   INPUTS ----------------------------------------------------------------
 %   n       no. of nodes
@@ -36,91 +36,60 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam, beampos)
     const_sigma = 5.670374419e-8; % stefan-boltzmann, W m-2 K-4
     T0 = 1.9;
     T04 = 1.9^4;
-    
-    %% FIX FOR PARFOR
-    beam.pos = beampos;
 
     %% MESH
+    % N.B. system origin at midpoint of leading (left) edge
 
-    nc = n;
-    nn = n*2;
-    nf = n*2*2;
-    nx = n*2*2*2;
-    
-    % fractions must add to 1
-    % n must be multiple of denominator
-    wc = nc*97/100;
-    wn = nn/100;
-    wf = nf/100;
-    wx = nx/100;
+    m = round(dl/dlf);
+    nf = round(Lf/dlf); % fine nodes
+    n = round(L/dl); % normal nodes
 
-    % xfine
-    dlx = L/nx;
-    dTx = zeros(nx/2, wx);
+    n_h2 = round(n*(L-Lf)/(2*L)); % height of sections 2 or 3 in normal nodes
+    n_h12 = round(n*(L+Lf)/(2*L)); % height of section 1 + 2 or 3 in normal nodes
+    n_1 = round(n*Lf/L); % height & width of section 1 in normal nodes
+    n_w4 = round(n*(L-Lf)/L); % width of section 4 in normal nodes
 
-    Exl = dTx;
-    Exl(:, 1) = 1;
-    Ext = dTx;
-    Ext(1, :) = 1;
-    Exr = dTx;
-    Exr(:, end) = 1;
-    Exb = dTx;
-    Exb(end, :) = 1;
+    % section 1--fine
+    dT1 = zeros(nf, nf);
+    E1L = dT1; E1L(:, 1) = 1;
+    E1T = dT1; E1T(1, :) = 1;
+    E1R = dT1; E1R(:, end) = 1;
+    E1B = dT1; E1B(end, :) = 1;
 
-    % fine
-    dlf = L/nf;
-    dTf = zeros(nf/2, wf);
+    % section 2--normal, above fine section
 
-    Efl = dTf;
-    Efl(:, 1) = 1;
-    Eft = dTf;
-    Eft(1, :) = 1;
-    Efr = dTf;
-    Efr(:, end) = 1;
-    Efb = dTf;
-    Efb(end, :) = 1;
+    dT2 = zeros(n_h2, n_1);
+    E2L = dT2; E2L(:, 1) = 1;
+    E2T = dT2; E2T(1, :) = 1;
+    E2R = dT2; E2R(:, end) = 1;
+    E2B = dT2; E2B(end, :) = 1;
 
-    % normal
-    dln = L/nn;
-    dTn = zeros(nn/2, wn);
+    % section 3--normal, below fine section
+    dT3 = zeros(n_h2, n_1);
+    E3L = dT3; E3L(:, 1) = 1;
+    E3T = dT3; E3T(1, :) = 1;
+    E3R = dT3; E3R(:, end) = 1;
+    E3B = dT3; E3B(end, :) = 1;
 
-    Enl = dTn;
-    Enl(:, 1) = 1;
-    Ent = dTn;
-    Ent(1, :) = 1;
-    Enr = dTn;
-    Enr(:, end) = 1;
-    Enb = dTn;
-    Enb(end, :) = 1;
-
-    % coarse
-    dlc = L/nc;
-    dTc = zeros(nc/2, wc);
-
-    Ecl = dTc;
-    Ecl(:, 1) = 1;
-    Ect = dTc;
-    Ect(1, :) = 1;
-    Ecr = dTc;
-    Ecr(:, end) = 1;
-    Ecb = dTc;
-    Ecb(end, :) = 1;
-    
+    % section 4--normal, right of fine section
+    dT4 = zeros(n, n_w4);
+    E4L = dT4; E4L(:, 1) = 1;
+    E4T = dT4; E4T(1, :) = 1;
+    E4R = dT4; E4R(:, end) = 1;
+    E4B = dT4; E4B(end, :) = 1;
 
     %% ENERGY DEPOSITION
     beta = (1-beam.gamma^-2)^.5;
     % mass stopping power = <1/rho dE/dx>
     msp = bethe(beam.M, mat.A, mat.Z, mat.I, mat.w, mat.rho, beta, 1);
-
-    rho_px = densdist(beam.pos, nx, L, 1/100, beam.np, beam.nb, ...
-        beam.f, beam.sigma, beam.sigma);
-    rho_pf = densdist(beam.pos-L/100, nf, L, 1/100, beam.np, beam.nb, ...
-        beam.f, beam.sigma, beam.sigma);
-    rho_pn = densdist(beam.pos-2*L/100, nn, L, 1/100, beam.np, ...
-        beam.nb, beam.f, beam.sigma, beam.sigma);
-    rho_pc = densdist(beam.pos-3*L/100, nc, L, 97/100, beam.np, ...
-        beam.nb, beam.f, beam.sigma, beam.sigma);
-
+    rho_p1 = densdist(beam.pos, dlf, Lf, Lf, 0, -Lf/2, beam.np, ...
+             beam.nb, beam.f, beam.sigma, beam.sigma);
+    rho_p2 = densdist(beam.pos, dl, Lf, (L-Lf)/2, 0, +Lf/2, beam.np, ...
+             beam.nb, beam.f, beam.sigma, beam.sigma);
+    rho_p3 = densdist(beam.pos, dl, Lf, (L-Lf)/2, 0, -L/2, beam.np, ...
+             beam.nb, beam.f, beam.sigma, beam.sigma);
+    rho_p4 = densdist(beam.pos, dl, L-Lf, L, +Lf, -L/2, beam.np, ...
+             beam.nb, beam.f, beam.sigma, beam.sigma);
 
     %% CONVERT UNITS
     % mass stopping power MeV g-1 cm2 --> J g-1 m2
@@ -129,179 +98,191 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam, beampos)
     % density g cm-3 --> kg m-3
     mat.rho = mat.rho * 1000;
 
-
     %% ANIMATION OUTPUT PARAMS
-    fps = 1000; % frames per simulated second
-    nframes = round((dt*fps)^-1); % no. of time steps btwn frames
-    frames = round(nt/nframes); % no. of frames total
+    %{
+    ntframes = round((dt*fps)^-1); % no. of time steps btwn frames
+    frames = round(nt/ntframes); % no. of frames total
     dTframes = zeros(nn/2, nn, frames); % preallocate
+    %}
 
-
-    %% TIME ITERATION
-    i = 1;
-
+    %% COEFFICIENTS
     % inner node conduction coefficients
-    c1x = (mat.k*dt)/(mat.rho*mat.c_p*dlx*dlx); % xfine
-    c1f = (mat.k*dt)/(mat.rho*mat.c_p*dlf*dlf); % fine
-    c1n = (mat.k*dt)/(mat.rho*mat.c_p*dln*dln); % normal
-    c1c = (mat.k*dt)/(mat.rho*mat.c_p*dlc*dlc); % coarse
+    condf = (mat.k*dt)/(mat.rho*mat.c_p*dlf*dlf); % conduction, fine
+    cond = (mat.k*dt)/(mat.rho*mat.c_p*dl*dl); % conduction, normal
 
     % proton energy deposition coefficients
-    c3x = (dt*msp*rho_px)/mat.c_p; % xfine
-    c3f = (dt*msp*rho_pf)/mat.c_p; % fine
-    c3n = (dt*msp*rho_pn)/mat.c_p; % normal
-    c3c = (dt*msp*rho_pc)/mat.c_p; % coarse
+    pro1 = (dt*msp*rho_p1)/mat.c_p; % section 1
+    pro2 = (dt*msp*rho_p2)/mat.c_p; % section 2
+    pro3 = (dt*msp*rho_p3)/mat.c_p; % section 3
+    pro4 = (dt*msp*rho_p4)/mat.c_p; % section 4
 
     % radiation
-    % all cells
-    c4 = (2*mat.epsilon*const_sigma*dt)/(mat.rho*mat.c_p*theta);
-    % xfine boundary
-    c4Ex = (2*mat.epsilon*const_sigma*dt)/(mat.rho*mat.c_p*dlx);
-    % fine boundary
-    c4Ef = (2*mat.epsilon*const_sigma*dt)/(mat.rho*mat.c_p*dlf);
-    % normal boundary
-    c4En = (2*mat.epsilon*const_sigma*dt)/(mat.rho*mat.c_p*dln);
-    % coarse boundary
-    c4Ec = (2*mat.epsilon*const_sigma*dt)/(mat.rho*mat.c_p*dlc);
+    % all cells front & back
+    rad = (2*mat.epsilon*const_sigma*dt)/(mat.rho*mat.c_p*theta);
+    % fine edge
+    radEf = (mat.epsilon*const_sigma*dt)/(mat.rho*mat.c_p*dlf);
+    % normal edge
+    radE = (mat.epsilon*const_sigma*dt)/(mat.rho*mat.c_p*dl);
 
-    % pre-calculate conduction coefficient matrices
-    c1xl = c1x*not(Exl); % xfine excluding left edge
-    c1xt = c1x*not(Ext); % xfine excluding top edge
-    c1xr = c1x*not(Exr); % xfine excluding right edge
-    c1xb = c1x*not(Exb); % xfine excluding bottom edge
-    c1fl = c1f*not(Efl); % fine etc.
-    c1ft = c1f*not(Eft);
-    c1fr = c1f*not(Efr);
-    c1fb = c1f*not(Efb);
-    c1nl = c1n*not(Enl); % normal etc.
-    c1nt = c1n*not(Ent);
-    c1nr = c1n*not(Enr);
-    c1nb = c1n*not(Enb);
-    c1cl = c1c*not(Ecl); % coarse etc.
-    c1ct = c1c*not(Ect);
-    c1cr = c1c*not(Ecr);
-    c1cb = c1c*not(Ecb);
+    % exclude edges of each section from inner node conduction
+    cond1L = condf*not(E1L); cond1T = condf*not(E1T);
+    cond1R = condf*not(E1R); cond1B = condf*not(E1B);
+    cond2L = cond*not(E2L); cond2T = cond*not(E2T);
+    cond2R = cond*not(E2R); cond2B = cond*not(E2B);
+    cond3L = cond*not(E3L); cond3T = cond*not(E3T);
+    cond3R = cond*not(E3R); cond3B = cond*not(E3B);
+    cond4L = cond*not(E4L); cond4T = cond*not(E4T);
+    cond4R = cond*not(E4R); cond4B = cond*not(E4B);
 
     % preallocate matrices for boundary conditions
-    Bixl = dTx; % xfine left
-    Bixt = dTx; % xfine top
-    Bixr = dTx; % xfine right
-    Bixb = dTx; % xfine bottom
-    Bifl = dTf; % fine etc.
-    Bift = dTf;
-    Bifr = dTf;
-    Bifb = dTf;
-    Binl = dTn; % normal etc.
-    Bint = dTn;
-    Binr = dTn;
-    Binb = dTn;
-    Bicl = dTc; % coarse etc.
-    Bict = dTc;
-    Bicr = dTc;
-    Bicb = dTc;
+    B1L = dT1; B1T = dT1; B1R = dT1; B1B = dT1;
+    B2L = dT2; B2T = dT2; B2R = dT2; B2B = dT2;
+    B3L = dT3; B3T = dT3; B3R = dT3; B3B = dT3;
+    B4L = dT4; B4T = dT4; B4R = dT4; B4B = dT4;
 
-    % inner boundaries
-    Tx2f = zeros(nx/2, 1); % xfine to fine
-    Tf2x = zeros(nf/2, 1); % fine to xfine
-    Tf2n = zeros(nf/2, 1); % fine to normal
-    Tn2f = zeros(nn/2, 1); % normal to fine
-    Tn2c = zeros(nn/2, 1); % normal to coarse
-    Tc2n = zeros(nc/2, 1); % coarse to normal
+    % preallocate inner boundaries
+    % conduction into sec 1
+    T2to1 = zeros(1, m*n_1); % lo->hi
+    T3to1 = zeros(1, m*n_1); % lo->hi
+    T4to1 = zeros(m*n_1, 1); % lo->hi
+    % conduction into sec 2
+    T1to2 = zeros(1, n_1); % hi->lo
+    T4to2 = zeros(n_h2, 1); % lo
+    % conduction into sec 3
+    T1to3 = zeros(1, n_1); % hi->lo
+    T4to3 = zeros(n_h2, 1); % lo
+    % conduction into sec 4
+    T1to4 = zeros(n_1, 1); % hi->lo
+    T2to4 = zeros(n_h2, 1); % lo
+    T3to4 = zeros(n_h2, 1); % lo
 
-    starttime = tic;
-
-    while i <= nt
+    %% TIME ITERATION
+    iter = 1;
+    %starttime = tic;
+    
+    while iter <= nt
 
         % node temps
-        Tixn = dTx + T0; % T^i_node xfine
-        Tifn = dTf + T0; % T^i_node fine
-        Tinn = dTn + T0; % T^i_node normal
-        Ticn = dTc + T0; % T^i_node coarse
-        Tixn4 = Tixn.*Tixn.*Tixn.*Tixn; % (T^i_node)^4 xfine
-        Tifn4 = Tifn.*Tifn.*Tifn.*Tifn; % (T^i_node)^4 fine
-        Tinn4 = Tinn.*Tinn.*Tinn.*Tinn; % (T^i_node)^4 normal
-        Ticn4 = Ticn.*Ticn.*Ticn.*Ticn; % (T^i_node)^4 coarse
+        Ti1 = dT1 + T0;
+        Ti2 = dT2 + T0;
+        Ti3 = dT3 + T0;
+        Ti4 = dT4 + T0;
+        Ti14 = Ti1.*Ti1.*Ti1.*Ti1;
+        Ti24 = Ti2.*Ti2.*Ti2.*Ti2;
+        Ti34 = Ti3.*Ti3.*Ti3.*Ti3;
+        Ti44 = Ti4.*Ti4.*Ti4.*Ti4;
 
-        % XFINE
+        % SECTION 1 #######################################################
         % boundary conditions
-        Bixl(:, 1) = -c4Ex*(Tixn4(:, 1)-T04); % rad
-        Bixt(1, :) = -c4Ex*(Tixn4(1, :)-T04); % rad
-        Tx2f(1:2:end-1) = Tifn(:, 1);
-        Tx2f(2:2:end) = Tifn(:, 1);
-        Bixr(:, end) = c1x*(Tx2f-Tixn(:, end)); % cond
-        Bixb(end, :) = -c4Ex*(Tixn4(end, :)-T04); % rad
-        % update temp
-        Tx = Tixn + ...
-              c1xl.*(circshift(Tixn, [0 1])-Tixn) + Bixl + ...
-              c1xt.*(circshift(Tixn, [1 0])-Tixn) + Bixt + ...
-              c1xr.*(circshift(Tixn, [0 -1])-Tixn) + Bixr + ...
-              c1xb.*(circshift(Tixn, [-1 0])-Tixn) + Bixb + ...
-              c3x + ...
-              -c4*(Tixn4-T04);
-        dTx = Tx - T0;
-
-
-        % FINE
-        % boundary conditions
-        Tf2x = (Tixn(1:2:end-1, end) + Tixn(2:2:end, end) + ...
-            Tixn(1:2:end-1, end-1) + Tixn(2:2:end, end-1))/4;
-        Bifl(:, 1) = c1f*(Tf2x-Tifn(:, 1)); % cond
-        Bift(1, :) = -c4Ef*(Tifn4(1, :)-T04); % rad
-        Tf2n(1:2:end-1) = Tinn(:, 1);
-        Tf2n(2:2:end) = Tinn(:, 1);
-        Bifr(:, end) = c1f*(Tf2n-Tifn(:, end)); % cond
-        Bifb(end, :) = -c4Ef*(Tifn4(end, :)-T04); % rad
+        % left edge radiation
+        B1L(:, 1) = -radEf*(Ti14(:, 1)-T04);
+        % top edge conduction sec 2->1
+        for i = 1:n_1 % no. of large cells on 2->1 boundary
+            T2to1(1, m*(i-1)+1:m*i) = Ti2(end, i);
+        end
+        B1T(1, :) = condf*(T2to1-Ti1(1, :));
+        % right edge conduction sec 4->1
+        for i = 1:n_1
+            T4to1(m*(i-1)+1:m*i, 1) = Ti4(n_h2+i, 1);
+        end
+        B1R(:, end) = condf*(T4to1-Ti1(:, end));
+        % bottom edge conduction sec 3->1
+        for i = 1:n_1
+            T3to1(1, m*(i-1)+1:m*i) = Ti3(1, i);
+        end
+        B1B(end, :) = condf*(T3to1-Ti1(end, :));
 
         % update temp
-        Tf = Tifn + ... 
-              c1fl.*(circshift(Tifn, [0 1])-Tifn) + Bifl + ...
-              c1ft.*(circshift(Tifn, [1 0])-Tifn) + Bift + ...
-              c1fr.*(circshift(Tifn, [0 -1])-Tifn) + Bifr + ...
-              c1fb.*(circshift(Tifn, [-1 0])-Tifn) + Bifb + ...
-              c3f + ...
-              -c4*(Tifn4-T04);
-        dTf = Tf - T0;
+        Tu1 = Ti1 + ...
+              cond1L.*(circshift(Ti1, [0 1])-Ti1) + B1L + ...
+              cond1T.*(circshift(Ti1, [1 0])-Ti1) + B1T + ...
+              cond1R.*(circshift(Ti1, [0 -1])-Ti1) + B1R + ...
+              cond1B.*(circshift(Ti1, [-1 0])-Ti1) + B1B + ...
+              pro1 + ...
+              -rad*(Ti14-T04);
+        dT1 = Tu1 - T0;
 
-
-        % NORMAL
+        % SECTION 2 #######################################################
         % boundary conditions
-        Tn2f = (Tifn(1:2:end-1, end) + Tifn(2:2:end, end) + ...
-            Tifn(1:2:end-1, end-1) + Tifn(2:2:end, end-1))/4;
-        Binl(:, 1) = c1n*(Tn2f-Tinn(:, 1)); % cond
-        Bint(1, :) = -c4En*(Tinn4(1, :)-T04); % rad
-        Tn2c(1:2:end-1) = Ticn(:, 1);
-        Tn2c(2:2:end) = Ticn(:, 1);
-        Binr(:, end) = c1n*(Tn2c-Tinn(:, end)); % cond
-        Binb(end, :) = -c4En*(Tinn4(end, :)-T04); % rad
-        % update temp
-        Tn = Tinn + ... 
-              c1nl.*(circshift(Tinn, [0 1])-Tinn) + Binl + ...
-              c1nt.*(circshift(Tinn, [1 0])-Tinn) + Bint + ...
-              c1nr.*(circshift(Tinn, [0 -1])-Tinn) + Binr + ...
-              c1nb.*(circshift(Tinn, [-1 0])-Tinn) + Binb + ...
-              c3n + ...
-              -c4*(Tinn4-T04);
-        dTn = Tn - T0;
-
-        % COARSE
-        % boundary conditions
-        Tc2n = (Tinn(1:2:end-1, end) + Tinn(2:2:end, end) + ...
-            Tinn(1:2:end, end-1) + Tinn(2:2:end, end-1))/4;
-        Bicl(:, 1) = c1c*(Tc2n-Ticn(:, 1)); % cond
-        Bict(1, :) = -c4Ec*(Ticn4(1, :)-T04); % rad
-        Bicr(:, end) = -c4Ec*(Ticn4(:, end)-T04); % rad
-        Bicb(end, :) = -c4Ec*(Ticn4(end, :)-T04); % rad
+        % left edge radiation
+        B2L(:, 1) = -radE*(Ti24(:, 1)-T04);
+        % top edge radiation
+        B2T(1, :) = -radE*(Ti24(1, :)-T04);
+        % right edge conduction sec 4->2
+        B2R(:, end) = cond*(Ti4(1:n_h2, 1)-Ti2(:, end));
+        % bottom edge conduction sec 1->2
+        for i = 1:n_1 % no. of large cells on 1->2 boundary
+            rc = m*(i-1)+1:m*i;
+            T1to2(1, i) = sum(Ti1(1:m, rc), 'all')/m^2;
+        end
+        B2B(end, :) = cond*(T1to2-Ti2(end, :));
 
         % update temp
-        Tc = Ticn + ... 
-              c1cl.*(circshift(Ticn, [0 1])-Ticn) + Bicl + ...
-              c1ct.*(circshift(Ticn, [1 0])-Ticn) + Bict + ...
-              c1cr.*(circshift(Ticn, [0 -1])-Ticn) + Bicr + ...
-              c1cb.*(circshift(Ticn, [-1 0])-Ticn) + Bicb + ...
-              c3c + ...
-              -c4*(Ticn4-T04);
-        dTc = Tc - T0;
+        Tu2 = Ti2 + ...
+              cond2L.*(circshift(Ti2, [0 1])-Ti2) + B2L + ...
+              cond2T.*(circshift(Ti2, [1 0])-Ti2) + B2T + ...
+              cond2R.*(circshift(Ti2, [0 -1])-Ti2) + B2R + ...
+              cond2B.*(circshift(Ti2, [-1 0])-Ti2) + B2B + ...
+              pro2 + ...
+              -rad*(Ti24-T04);
+        dT2 = Tu2 - T0;
 
+        % SECTION 3 #######################################################
+        % boundary conditions
+        % left edge radiation
+        B3L(:, 1) = -radE*(Ti34(:, 1)-T04);
+        % top edge conduction sec 1->3
+        for i = 1:n_1 % no. of large cells on 1->3 boundary
+            rc = m*(i-1)+1:m*i;
+            T1to3(1, i) = sum(Ti1((end-m)+1:end, rc), 'all')/m^2;
+        end
+        B3T(1, :) = cond*(T1to3-Ti3(1, :));
+        % right edge conduction sec 4->3
+        B3R(:, end) = cond*(Ti4(n_h12+1:end, 1)-Ti3(:, end));
+        % bottom edge radiation
+        B3B(end, :) = -radE*(Ti34(end, :)-T04);
+        
+        % update temp
+        Tu3 = Ti3 + ...
+              cond3L.*(circshift(Ti3, [0 1])-Ti3) + B3L + ...
+              cond3T.*(circshift(Ti3, [1 0])-Ti3) + B3T + ...
+              cond3R.*(circshift(Ti3, [0 -1])-Ti3) + B3R + ...
+              cond3B.*(circshift(Ti3, [-1 0])-Ti3) + B3B + ...
+              pro3 + ...
+              -rad*(Ti34-T04);
+        dT3 = Tu3 - T0;
+
+        % SECTION 4 #######################################################
+        % boundary conditions
+        % left edge conduction 2->4
+        B4L(1:n_h2, 1) = cond*(Ti2(:, end)-Ti4(1:n_h2, 1));
+        % left edge conduction 1->4
+        for i = 1:n_1 % no. of large cells on 1->4 boundary
+            rr = m*(i-1)+1:m*i;
+            T1to4(i, 1) = sum(Ti1(rr, (end-m)+1:end), 'all')/m^2;
+        end
+        B4L(n_h2+1:n_h12, 1) = cond*(T1to4-Ti4(n_h2+1:n_h12, 1));
+        % left edge conduction 3->4
+        B4L(n_h12+1:end, 1) = cond*(Ti3(:, end)-Ti4(n_h12+1:end, 1));
+        % top edge radiation
+        B4T(1, :) = -radE*(Ti44(1, :)-T04);
+        % right edge radiation
+        B4R(:, end) = -radE*(Ti44(:, end)-T04);
+        % bottom edge radiation
+        B4B(end, :) = -radE*(Ti44(end, :)-T04);
+
+        % update temp
+        Tu4 = Ti4 + ...
+              cond4L.*(circshift(Ti4, [0 1])-Ti4) + B4L + ...
+              cond4T.*(circshift(Ti4, [1 0])-Ti4) + B4T + ...
+              cond4R.*(circshift(Ti4, [0 -1])-Ti4) + B4R + ...
+              cond4B.*(circshift(Ti4, [-1 0])-Ti4) + B4B + ...
+              pro4 + ...
+              -rad*(Ti44-T04);
+        dT4 = Tu4 - T0;
+
+        %{
+        % SAVE ############################################################
         if rem(i, nframes) == 0
             ind = i/nframes;
             dTframes(:, 1:nn/100, ind) = dTx(1:4:end, 1:4:end);
@@ -309,11 +290,11 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam, beampos)
             dTframes(:, (2*nn/100)+1:3*nn/100, ind) = dTn;
             dTframes(:, (3*nn/100)+1:end, ind) = kron(dTc, ones(2));
             endtime = toc(starttime);
-            fprintf('%.4f%% complete in %.4f s. Animation frame captured.\n', 100*i/nt, endtime)
+            fprintf('%.4f%% complete in %.4f s. Frame captured.\n', 100*i/nt, endtime)
             starttime = tic;
         end
-
-        i = i + 1;
+        %}
+        iter = iter + 1
 
     end
 
