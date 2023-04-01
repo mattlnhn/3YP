@@ -9,7 +9,7 @@ if rem(n, 2) == 1; n = n+1; end % n must be multiple of 2
 %}
 
 L = 1e-2;
-n = 1000;
+n = 800; % multiple of 100
 
 theta = 500e-6; % thickness, m
 

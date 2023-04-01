@@ -34,6 +34,8 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam, beampos)
 
     %% PHYSICAL CONSTANTS
     const_sigma = 5.670374419e-8; % stefan-boltzmann, W m-2 K-4
+    T0 = 1.9;
+    T04 = 1.9^4;
     
     %% FIX FOR PARFOR
     beam.pos = beampos;
@@ -56,9 +58,6 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam, beampos)
     dlx = L/nx;
     dTx = zeros(nx/2, wx);
 
-    T0x = 1.9*ones(nx/2, wx);
-    T04x = 1.9^4*ones(nx/2, wx);
-
     Exl = dTx;
     Exl(:, 1) = 1;
     Ext = dTx;
@@ -71,9 +70,6 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam, beampos)
     % fine
     dlf = L/nf;
     dTf = zeros(nf/2, wf);
-
-    T0f = 1.9*ones(nf/2, wf);
-    T04f = 1.9^4*ones(nf/2, wf);
 
     Efl = dTf;
     Efl(:, 1) = 1;
@@ -88,9 +84,6 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam, beampos)
     dln = L/nn;
     dTn = zeros(nn/2, wn);
 
-    T0n = 1.9*ones(nn/2, wn);
-    T04n = 1.9^4*ones(nn/2, wn);
-
     Enl = dTn;
     Enl(:, 1) = 1;
     Ent = dTn;
@@ -103,9 +96,6 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam, beampos)
     % coarse
     dlc = L/nc;
     dTc = zeros(nc/2, wc);
-
-    T0c = 1.9*ones(nc/2, wc);
-    T04c = 1.9^4*ones(nc/2, wc);
 
     Ecl = dTc;
     Ecl(:, 1) = 1;
@@ -223,10 +213,10 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam, beampos)
     while i <= nt
 
         % node temps
-        Tixn = dTx + T0x; % T^i_node xfine
-        Tifn = dTf + T0f; % T^i_node fine
-        Tinn = dTn + T0n; % T^i_node normal
-        Ticn = dTc + T0c; % T^i_node coarse
+        Tixn = dTx + T0; % T^i_node xfine
+        Tifn = dTf + T0; % T^i_node fine
+        Tinn = dTn + T0; % T^i_node normal
+        Ticn = dTc + T0; % T^i_node coarse
         Tixn4 = Tixn.*Tixn.*Tixn.*Tixn; % (T^i_node)^4 xfine
         Tifn4 = Tifn.*Tifn.*Tifn.*Tifn; % (T^i_node)^4 fine
         Tinn4 = Tinn.*Tinn.*Tinn.*Tinn; % (T^i_node)^4 normal
@@ -234,12 +224,12 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam, beampos)
 
         % XFINE
         % boundary conditions
-        Bixl(:, 1) = -c4Ex*(Tixn4(:, 1)-T04x(:, 1)); % rad
-        Bixt(1, :) = -c4Ex*(Tixn4(1, :)-T04x(1, :)); % rad
+        Bixl(:, 1) = -c4Ex*(Tixn4(:, 1)-T04); % rad
+        Bixt(1, :) = -c4Ex*(Tixn4(1, :)-T04); % rad
         Tx2f(1:2:end-1) = Tifn(:, 1);
         Tx2f(2:2:end) = Tifn(:, 1);
         Bixr(:, end) = c1x*(Tx2f-Tixn(:, end)); % cond
-        Bixb(end, :) = -c4Ex*(Tixn4(end, :)-T04x(end, :)); % rad
+        Bixb(end, :) = -c4Ex*(Tixn4(end, :)-T04); % rad
         % update temp
         Tx = Tixn + ...
               c1xl.*(circshift(Tixn, [0 1])-Tixn) + Bixl + ...
@@ -247,8 +237,8 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam, beampos)
               c1xr.*(circshift(Tixn, [0 -1])-Tixn) + Bixr + ...
               c1xb.*(circshift(Tixn, [-1 0])-Tixn) + Bixb + ...
               c3x + ...
-              -c4*(Tixn4-T04x);
-        dTx = Tx - T0x;
+              -c4*(Tixn4-T04);
+        dTx = Tx - T0;
 
 
         % FINE
@@ -256,11 +246,12 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam, beampos)
         Tf2x = (Tixn(1:2:end-1, end) + Tixn(2:2:end, end) + ...
             Tixn(1:2:end-1, end-1) + Tixn(2:2:end, end-1))/4;
         Bifl(:, 1) = c1f*(Tf2x-Tifn(:, 1)); % cond
-        Bift(1, :) = -c4Ef*(Tifn4(1, :)-T04f(1, :)); % rad
+        Bift(1, :) = -c4Ef*(Tifn4(1, :)-T04); % rad
         Tf2n(1:2:end-1) = Tinn(:, 1);
         Tf2n(2:2:end) = Tinn(:, 1);
         Bifr(:, end) = c1f*(Tf2n-Tifn(:, end)); % cond
-        Bifb(end, :) = -c4Ef*(Tifn4(end, :)-T04f(end, :)); % rad
+        Bifb(end, :) = -c4Ef*(Tifn4(end, :)-T04); % rad
+
         % update temp
         Tf = Tifn + ... 
               c1fl.*(circshift(Tifn, [0 1])-Tifn) + Bifl + ...
@@ -268,8 +259,8 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam, beampos)
               c1fr.*(circshift(Tifn, [0 -1])-Tifn) + Bifr + ...
               c1fb.*(circshift(Tifn, [-1 0])-Tifn) + Bifb + ...
               c3f + ...
-              -c4*(Tifn4-T04f);
-        dTf = Tf - T0f;
+              -c4*(Tifn4-T04);
+        dTf = Tf - T0;
 
 
         % NORMAL
@@ -277,11 +268,11 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam, beampos)
         Tn2f = (Tifn(1:2:end-1, end) + Tifn(2:2:end, end) + ...
             Tifn(1:2:end-1, end-1) + Tifn(2:2:end, end-1))/4;
         Binl(:, 1) = c1n*(Tn2f-Tinn(:, 1)); % cond
-        Bint(1, :) = -c4En*(Tinn4(1, :)-T04n(1, :)); % rad
+        Bint(1, :) = -c4En*(Tinn4(1, :)-T04); % rad
         Tn2c(1:2:end-1) = Ticn(:, 1);
         Tn2c(2:2:end) = Ticn(:, 1);
         Binr(:, end) = c1n*(Tn2c-Tinn(:, end)); % cond
-        Binb(end, :) = -c4En*(Tinn4(end, :)-T04n(end, :)); % rad
+        Binb(end, :) = -c4En*(Tinn4(end, :)-T04); % rad
         % update temp
         Tn = Tinn + ... 
               c1nl.*(circshift(Tinn, [0 1])-Tinn) + Binl + ...
@@ -289,17 +280,18 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam, beampos)
               c1nr.*(circshift(Tinn, [0 -1])-Tinn) + Binr + ...
               c1nb.*(circshift(Tinn, [-1 0])-Tinn) + Binb + ...
               c3n + ...
-              -c4*(Tinn4-T04n);
-        dTn = Tn - T0n;
+              -c4*(Tinn4-T04);
+        dTn = Tn - T0;
 
         % COARSE
         % boundary conditions
         Tc2n = (Tinn(1:2:end-1, end) + Tinn(2:2:end, end) + ...
             Tinn(1:2:end, end-1) + Tinn(2:2:end, end-1))/4;
         Bicl(:, 1) = c1c*(Tc2n-Ticn(:, 1)); % cond
-        Bict(1, :) = -c4Ec*(Ticn4(1, :)-T04c(1, :)); % rad
-        Bicr(:, end) = -c4Ec*(Ticn4(:, end)-T04c(:, end)); % rad
-        Bicb(end, :) = -c4Ec*(Ticn4(end, :)-T04c(end, :)); % rad
+        Bict(1, :) = -c4Ec*(Ticn4(1, :)-T04); % rad
+        Bicr(:, end) = -c4Ec*(Ticn4(:, end)-T04); % rad
+        Bicb(end, :) = -c4Ec*(Ticn4(end, :)-T04); % rad
+
         % update temp
         Tc = Ticn + ... 
               c1cl.*(circshift(Ticn, [0 1])-Ticn) + Bicl + ...
@@ -307,8 +299,8 @@ function [dTframes] = heating2(n, L, theta, dt, nt, mat, beam, beampos)
               c1cr.*(circshift(Ticn, [0 -1])-Ticn) + Bicr + ...
               c1cb.*(circshift(Ticn, [-1 0])-Ticn) + Bicb + ...
               c3c + ...
-              -c4*(Ticn4-T04c);
-        dTc = Tc - T0c;
+              -c4*(Ticn4-T04);
+        dTc = Tc - T0;
 
         if rem(i, nframes) == 0
             ind = i/nframes;
