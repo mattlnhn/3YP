@@ -1,10 +1,13 @@
 clc; clear; close all;
 
-L = 1e-2;
-dl = 2.5e-5;
+Lc = 1e-2;
+dlc = 1e-4;
+L = 1e-3;
+dl = 1e-5;
 Lf = 1e-4;
 dlf = 1e-6;
-m = round(dl/dlf);
+mf = round(dl/dlf);
+mc = round(dlc/dl);
 
 theta = 500e-6; % thickness, m
 
@@ -29,7 +32,7 @@ beam.pos = -3*beam.sigma; % beam centre pos w.r.t. midpoint of left edge, m
 
 tau = .25;
 dt = tau*(mat.rho*1000*mat.c_p*dlf*dlf)/mat.k; % time increment, s
-T = 1e-2;
+T = 1e-1;
 nt = round(T/dt);
 T = dt*nt;
 
@@ -37,15 +40,21 @@ fprintf('dt = %d s with %d time steps for total simulation time %d s\nEnter to c
 pause()
 
 total_time = tic;
-[dT1, dT2, dT3, dT4] = heating2(dlf, Lf, dl, L, theta, dt, nt, 100, mat, beam);
+[dT1, dT2, dT3, dT4, dT5, dT6, dT7] = heating2(dlf, Lf, dl, L, dlc, Lc, theta, dt, nt, 100, mat, beam);
 toc(total_time)
 
-dT2up = kron(dT2, ones(m));
-dT3up = kron(dT3, ones(m));
-dT4up = kron(dT4, ones(m));
+dT2up = kron(dT2, ones(mf));
+dT3up = kron(dT3, ones(mf));
+dT4up = kron(dT4, ones(mf));
 
-dTL = [dT2up; dT1; dT3up];
-dTfinal = [dTL dT4up];
+dT5up = kron(dT5, ones(mf*mc));
+dT6up = kron(dT6, ones(mf*mc));
+dT7up = kron(dT7, ones(mf*mc));
+
+dT_s1 = [dT2up; dT1; dT3up];
+dT_s2 = [dT_s1 dT4up];
+dT_s3 = [dT5up; dT_s2; dT6up];
+dTfinal = [dT_s3 dT7up];
 
 figure()
 imagesc(dTfinal)
