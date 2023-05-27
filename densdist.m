@@ -1,27 +1,35 @@
-function [rho_p] = densdist(pos, n, L, np, f, sigma_x, sigma_y)
-% DENSDIST proton density at each node
-%   pos         position of beam centre relative to midpoint of left edge of
-%               detector, 1x2 vector
-%   n           no. of nodes
-%   L           detector side length [m]
-%   np          no. protons per bunch
-%   f           bunches per second [s-1]
-%   sigma_xy    beam core width (1 s.d.) [m]
+function [rho_p] = densdist(beamxpos, dl, dx, dy, secxpos, secypos, phi, ...
+                   np, nb, f, sigma_x, sigma_y)
+%   DENSDIST proton density at each node
+%   N.B. system origin at midpoint of leading (left) edge
+%   dx, dy, secxpos, secypos MUST be multiples of dl
+%   INPUTS ----------------------------------------------------------------
+%   beamxpos    beam centre x pos wrt system origin [m]
+%   dl          distance between nodes [m]
+%   dx          size in x dimension [m]
+%   dy          size in y dimension [m]
+%   secxpos     x pos of bottom left corner of section wrt system origin
+%               [m]
+%   secypos     y pos of bottom left corner of section wrt system origin
+%               [m]
+%   np          protons per bunch
+%   nb          bunches in machine
+%   f           bunch revolution frequency [Hz]
+%   sigma_x     beam core x width [m]
+%   sigma_y     beam core y width [m]
+%   OUTPUTS ---------------------------------------------------------------
+%   rho_p
+    xrange = (0:dl:dx-dl) + secxpos + dl/2;
+    yrange = (dy-dl:-dl:0) + secypos + dl/2;
+    xrange = xrange.*cosd(phi);
 
-    dl = L/n;
-    xrange = (0:dl:L-dl) + dl/2;
-    yrange = (0:dl:L-dl) + dl/2 - L/2;
-    xbeam = pos(1);
-    ybeam = pos(2);
+    xbeam = beamxpos;
+    ybeam = 0;
     [xmesh, ymesh] = meshgrid(xrange, yrange);
-    % node distance from beam centre squared
-    %d2 = (xpos - xmesh).^2 + (ypos - ymesh).^2;
     xrel2 = (xbeam - xmesh).^2;
     yrel2 = (ybeam - ymesh).^2;
 
-    % gaussian
-    p = np*f; % avg protons s^-1
-    rho_p = (p/(2*pi*sigma_x*sigma_y))*exp(-.5*((xrel2/sigma_x^2)+(yrel2/sigma_y^2)));
-
+    p = np*nb*f; % avg protons s^-1
+    rho_p = (p/(2*pi*sigma_x*sigma_y))*...
+            exp(-.5*((xrel2/sigma_x^2)+(yrel2/sigma_y^2)));
 end
-

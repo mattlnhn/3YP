@@ -2,7 +2,7 @@ function dEdx = bethe(M, A, Z, I, w, rho, beta, deltaOn)
 % BETHE Bethe equation
 %   A           1*n vector of atomic mass [g mol-1]
 %   Z           1*n vector of atomic no.
-%   I           1*n vector of mean ionisation energy [eV]
+%   I           1*n vector of mean ionisation energy [MeV]
 %   w           1*n vector of mass fractions
 %   rho         1*n vector of density [g cm-3]
 %   beta        v/c
@@ -46,6 +46,9 @@ end
 function I = bragg(A, Z, I, w)
 %BRAGG calculate I for compounds
 
+    if length(I) > 1
+        I = I*1.13;
+    end
     n = sum(w.*(Z./A).*log(I));
     d = sum(w.*(Z./A));
     I = exp(n/d);
@@ -53,7 +56,7 @@ function I = bragg(A, Z, I, w)
 end
 
 function delta = deltacorr2(betagamma, w, Z, A, I, rho)
-%DELTACORR2 delta correlation based on D.E. Groom et al. (2001)
+%DELTACORR2 delta correlation based on D. E. Groom et al. (2001)
 
     I = I*1e6; % MeV to eV
     ZoverA = sum(w.*Z./A); % see appendix A
