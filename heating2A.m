@@ -1,4 +1,4 @@
-function [dT1out, dT2out, dT4out, dT5out, dT7out] = heating2(dlf, Lf, dl, L, dlc, Lc, theta, dt, nt, frames, mat, beam, phi)
+function [dT1out, dT2out, dT4out, dT5out, dT7out] = heating2A(dlf, Lf, dl, L, dlc, Lc, theta, dt, nt, frames, mat, beam, phi)
 % HEATING
 %   INPUTS ----------------------------------------------------------------
 %   n       no. of nodes
@@ -147,14 +147,17 @@ function [dT1out, dT2out, dT4out, dT5out, dT7out] = heating2(dlf, Lf, dl, L, dlc
 
     %% COEFFICIENTS
     % inner node conduction coefficients
-    condf = (mat.k*dt)/(mat.rho*mat.c_p*dlf*dlf); % conduction, fine
-    cond = (mat.k*dt)/(mat.rho*mat.c_p*dl*dl); % conduction, normal
-    condc = (mat.k*dt)/(mat.rho*mat.c_p*dlc*dlc); % conduction, coarse
+    condfV = (mat.k*dt)/(mat.rho*mat.c_p*dlf*dlf); % conduction, fine
+    condfH = (mat.k*dt)/(mat.rho*mat.c_p*dlf*cosd(phi)*dlf*cosd(phi)); % conduction, fine
+    condV = (mat.k*dt)/(mat.rho*mat.c_p*dl*dl); % conduction, normal
+    condH = (mat.k*dt)/(mat.rho*mat.c_p*dl*cosd(phi)*dl*cosd(phi)); % conduction, normal
+    condcV = (mat.k*dt)/(mat.rho*mat.c_p*dlc*dlc); % conduction, coarse
+    condcH = (mat.k*dt)/(mat.rho*mat.c_p*dlc*cosd(phi)*dlc*cosd(phi)); % conduction, coarse
 
     % proton energy deposition coefficients
-    pro1 = (dt*msp*rho_p1)/(mat.c_p*cosd(0)); % section 1
-    pro2 = (dt*msp*rho_p2)/(mat.c_p*cosd(0)); % section 2
-    pro4 = (dt*msp*rho_p4)/(mat.c_p*cosd(0)); % section 4
+    pro1 = (dt*msp*rho_p1)/(mat.c_p); % section 1
+    pro2 = (dt*msp*rho_p2)/(mat.c_p); % section 2
+    pro4 = (dt*msp*rho_p4)/(mat.c_p); % section 4
     % rho_p zero for sections 5-7
 
     % radiation
@@ -168,16 +171,16 @@ function [dT1out, dT2out, dT4out, dT5out, dT7out] = heating2(dlf, Lf, dl, L, dlc
     radEc = (mat.epsilon*const_sigma*dt)/(mat.rho*mat.c_p*dlc);
 
     % exclude edges of each section from inner node conduction
-    cond1L = condf*not(E1L); cond1T = condf*not(E1T);
-    cond1R = condf*not(E1R); cond1B = condf*not(E1B);
-    cond2L = cond*not(E2L); cond2T = cond*not(E2T);
-    cond2R = cond*not(E2R); cond2B = cond*not(E2B);
-    cond4L = cond*not(E4L); cond4T = cond*not(E4T);
-    cond4R = cond*not(E4R); cond4B = cond*not(E4B);
-    cond5L = condc*not(E5L); cond5T = condc*not(E5T);
-    cond5R = condc*not(E5R); cond5B = condc*not(E5B);
-    cond7L = condc*not(E7L); cond7T = condc*not(E7T);
-    cond7R = condc*not(E7R); cond7B = condc*not(E7B);
+    cond1L = condfH*not(E1L); cond1T = condfV*not(E1T);
+    cond1R = condfH*not(E1R); cond1B = condfV*not(E1B);
+    cond2L = condH*not(E2L); cond2T = condV*not(E2T);
+    cond2R = condH*not(E2R); cond2B = condV*not(E2B);
+    cond4L = condH*not(E4L); cond4T = condV*not(E4T);
+    cond4R = condH*not(E4R); cond4B = condV*not(E4B);
+    cond5L = condcH*not(E5L); cond5T = condcV*not(E5T);
+    cond5R = condcH*not(E5R); cond5B = condcV*not(E5B);
+    cond7L = condcH*not(E7L); cond7T = condcV*not(E7T);
+    cond7R = condcH*not(E7R); cond7B = condcV*not(E7B);
 
     % preallocate matrices for boundary conditions
     B1L = dT1; B1T = dT1; B1R = dT1; B1B = dT1;
@@ -234,12 +237,12 @@ function [dT1out, dT2out, dT4out, dT5out, dT7out] = heating2(dlf, Lf, dl, L, dlc
         for i = 1:n_1 % larger cells on 2->1 boundary
             T2to1(1, mf*(i-1)+1:mf*i) = Ti2(end, i);
         end
-        B1T(1, :) = condf*(T2to1-Ti1(1, :));
+        B1T(1, :) = condfV*(T2to1-Ti1(1, :));
         % right edge conduction 4->1
         for i = 1:n_1/2 % larger cells on 4->1 boundary
             T4to1(mf*(i-1)+1:mf*i, 1) = Ti4(n_h2+i, 1);
         end
-        B1R(:, end) = condf*(T4to1-Ti1(:, end));
+        B1R(:, end) = condfH*(T4to1-Ti1(:, end));
         % bottom edge adiabatic
         B1B(end, :) = 0;
 
@@ -261,15 +264,15 @@ function [dT1out, dT2out, dT4out, dT5out, dT7out] = heating2(dlf, Lf, dl, L, dlc
         for i = 1:c_w2 % larger cells on 5->2 boundary
             T5to2(1, mc*(i-1)+1:mc*i) = Ti5(end, i);
         end
-        B2T(1, :) = cond*(T5to2-Ti2(1, :));
+        B2T(1, :) = condV*(T5to2-Ti2(1, :));
         % right edge conduction sec 4->2
-        B2R(:, end) = cond*(Ti4(1:n_h2, 1)-Ti2(:, end));
+        B2R(:, end) = condH*(Ti4(1:n_h2, 1)-Ti2(:, end));
         % bottom edge conduction sec 1->2
         for i = 1:n_1 % no. of large cells on 1->2 boundary
             rc = mf*(i-1)+1:mf*i;
             T1to2(1, i) = sum(Ti1(1:mf, rc), 'all')/mf^2;
         end
-        B2B(end, :) = cond*(T1to2-Ti2(end, :));
+        B2B(end, :) = condV*(T1to2-Ti2(end, :));
 
         % update temp
         Tu2 = Ti2 + ...
@@ -284,23 +287,23 @@ function [dT1out, dT2out, dT4out, dT5out, dT7out] = heating2(dlf, Lf, dl, L, dlc
         % SECTION 4 #######################################################
         % boundary conditions
         % left edge conduction 2->4
-        B4L(1:n_h2, 1) = cond*(Ti2(:, end)-Ti4(1:n_h2, 1));
+        B4L(1:n_h2, 1) = condH*(Ti2(:, end)-Ti4(1:n_h2, 1));
         % left edge conduction 1->4
         for i = 1:n_1/2 % no. of large cells on 1->4 boundary
             rr = mf*(i-1)+1:mf*i;
             T1to4(i, 1) = sum(Ti1(rr, (end-mf)+1:end), 'all')/mf^2;
         end
-        B4L(n_h2+1:end, 1) = cond*(T1to4-Ti4(n_h2+1:end, 1));
+        B4L(n_h2+1:end, 1) = condH*(T1to4-Ti4(n_h2+1:end, 1));
         % top edge conduction 5->4
         for i = 1:c_w4 % larger nodes on 5->4 boundary
             T5to4(1, mc*(i-1)+1:mc*i) = Ti5(end, c_w2+i);
         end
-        B4T(1, :) = cond*(T5to4-Ti4(1, :));
+        B4T(1, :) = condV*(T5to4-Ti4(1, :));
         % right edge conduction 7->4
         for i = 1:c_h4/2 % larger nodes on 7->4 boundary
             T7to4(mc*(i-1)+1:mc*i, 1) = Ti7(c_h5+i, 1);
         end
-        B4R(:, end) = cond*(T7to4-Ti4(:, end));
+        B4R(:, end) = condH*(T7to4-Ti4(:, end));
         % bottom edge adiabatic
         B4B(end, :) = 0;
 
@@ -322,19 +325,19 @@ function [dT1out, dT2out, dT4out, dT5out, dT7out] = heating2(dlf, Lf, dl, L, dlc
         B5T(1, :) = -radEc*(Ti54(1, :)-T04);
         % right edge conduction 7->5
         T7to5 = Ti7(1:c_h5, 1);
-        B5R(:, end) = condc*(T7to5-Ti5(:, end));
+        B5R(:, end) = condcH*(T7to5-Ti5(:, end));
         % bottom edge conduction 2->5
         for i = 1:c_w2 % larger nodes on 2->5 boundary
             rc = mc*(i-1)+1:mc*i;
             T2to5(1, i) = sum(Ti2(1:mc, rc), 'all')/mc^2;
         end
-        B5B(end, 1:c_w2) = condc*(T2to5-Ti5(end, 1:c_w2));
+        B5B(end, 1:c_w2) = condcV*(T2to5-Ti5(end, 1:c_w2));
         % bottom edge conduction 4->5
         for i = 1:c_w4 % larger nodes on 4->5 boundary
             rc = mc*(i-1)+1:mc*i;
             T4to5(1, i) = sum(Ti4(1:mc, rc), 'all')/mc^2;
         end
-        B5B(end, c_w2+1:end) = condc*(T4to5-Ti5(end, c_w2+1:end));
+        B5B(end, c_w2+1:end) = condcV*(T4to5-Ti5(end, c_w2+1:end));
 
         % update temp
         Tu5 = Ti5 + ...
@@ -349,13 +352,13 @@ function [dT1out, dT2out, dT4out, dT5out, dT7out] = heating2(dlf, Lf, dl, L, dlc
         % boundary conditions
         % left edge conduction 5->7
         T5to7 = Ti5(:, end);
-        B7L(1:c_h5, 1) = condc*(T5to7-Ti7(1:c_h5, 1));
+        B7L(1:c_h5, 1) = condcH*(T5to7-Ti7(1:c_h5, 1));
         % left edge conduction 4->7
         for i = 1:c_h4/2 % larger nodes on 4->7 boundary
             rr = mc*(i-1)+1:mc*i;
             T4to7(i, 1) = sum(Ti4(rr, (end-mc)+1:end), 'all')/mc^2;
         end
-        B7L(c_h5+1:end, 1) = condc*(T4to7-Ti7(c_h5+1:end, 1));
+        B7L(c_h5+1:end, 1) = condcH*(T4to7-Ti7(c_h5+1:end, 1));
         % top edge radiation
         B7T(1, :) = -radEc*(Ti74(1, :)-T04);
         % right edge radiation

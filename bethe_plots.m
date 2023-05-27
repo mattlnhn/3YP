@@ -46,7 +46,8 @@ loglog(betagamma, p_dEdx_d, 'r')
 
 %legend('Proton, without delta', 'Proton, with delta', 'Muon, without delta', 'Muon, with delta')
 xlabel('\beta\gamma')
-ylabel('-\langledE/\rhodx\rangle [MeV g^{-1} cm^2]')
+ylabel('\langle-1/\rho dE/dx\rangle [MeV g^{-1} cm^2]')
 ylim([1 10])
 grid on
 grid minor
+fontsize(16, 'points')

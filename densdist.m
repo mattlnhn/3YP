@@ -1,4 +1,4 @@
-function [rho_p] = densdist(beamxpos, dl, dx, dy, secxpos, secypos, ...
+function [rho_p] = densdist(beamxpos, dl, dx, dy, secxpos, secypos, phi, ...
                    np, nb, f, sigma_x, sigma_y)
 %   DENSDIST proton density at each node
 %   N.B. system origin at midpoint of leading (left) edge
@@ -21,6 +21,8 @@ function [rho_p] = densdist(beamxpos, dl, dx, dy, secxpos, secypos, ...
 %   rho_p
     xrange = (0:dl:dx-dl) + secxpos + dl/2;
     yrange = (dy-dl:-dl:0) + secypos + dl/2;
+    xrange = xrange.*cosd(phi);
+
     xbeam = beamxpos;
     ybeam = 0;
     [xmesh, ymesh] = meshgrid(xrange, yrange);

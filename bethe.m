@@ -2,7 +2,7 @@ function dEdx = bethe(M, A, Z, I, w, rho, beta, deltaOn)
 % BETHE Bethe equation
 %   A           1*n vector of atomic mass [g mol-1]
 %   Z           1*n vector of atomic no.
-%   I           1*n vector of mean ionisation energy [eV]
+%   I           1*n vector of mean ionisation energy [MeV]
 %   w           1*n vector of mass fractions
 %   rho         1*n vector of density [g cm-3]
 %   beta        v/c
